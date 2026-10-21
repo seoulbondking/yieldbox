@@ -1,0 +1,1870 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Yield Box</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/uplot@1.6.30/dist/uPlot.min.css">
+<script src="https://cdn.jsdelivr.net/npm/uplot@1.6.30/dist/uPlot.iife.min.js"></script>
+<script src="data.js"></script>
+<style>
+:root{
+  /* 기본 = 블룸버그 터미널풍 다크 */
+  --bg:#000000; --panel:#0a0a0a; --fg:#e8e8e8; --muted:#8a8a8a; --line:#262626; --hover:#1a1a1a; --zebra:#0f0f0f;
+  --accent:#ff9f1a; --accent-weak:#2a1c06; --amber:#ff9f1a; --on-accent:#000; --up:#ff4d4d; --down:#3ea6ff; --grid:#2e2e2e; --axis:#b0b0b0;
+  --head:#000; --th:#121212; --shadow:none; color-scheme:dark;
+  --mono:"Consolas","D2Coding","Roboto Mono","Malgun Gothic",monospace;
+}
+:root[data-theme="light"]{
+  --bg:#f4f5f7; --panel:#ffffff; --fg:#111; --muted:#5f6670; --line:#d6dae0; --hover:#f3f4f6; --zebra:#f8f9fa;
+  --accent:#d97706; --accent-weak:#fff4e5; --amber:#c2410c; --on-accent:#fff; --up:#d62d2d; --down:#1f5fd6; --grid:#d3d8df; --axis:#4b5563;
+  --head:#ffffff; --th:#f3f4f6; color-scheme:light;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 "Pretendard","Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif}
+header{display:flex;align-items:center;gap:16px;padding:12px 20px;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5;flex-wrap:wrap}
+header h1{font-size:17px;margin:0;font-weight:700}
+header .meta{color:var(--muted);font-size:12px}
+nav{display:flex;gap:4px;flex-wrap:wrap}
+nav button{border:0;background:none;color:var(--muted);padding:7px 12px;border-radius:6px;font:inherit;cursor:pointer}
+nav button:hover{background:var(--hover);color:var(--fg)}
+nav button.on{background:var(--accent-weak);color:var(--accent);font-weight:600}
+.spacer{flex:1}
+main{padding:16px 20px;max-width:1500px;margin:0 auto}
+.tab{display:none}.tab.on{display:block}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;box-shadow:var(--shadow);margin-bottom:14px;min-width:0}
+.panel h2{font-size:14px;margin:0 0 10px;font-weight:650}
+.row{display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+.grid2{display:grid;grid-template-columns:300px 1fr;gap:14px;align-items:start}
+@media (max-width:900px){.grid2{grid-template-columns:1fr}}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;margin-bottom:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.card .k{color:var(--muted);font-size:12px}
+.card .v{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:2px}
+.card .c{font-size:12px;font-variant-numeric:tabular-nums}
+.up{color:var(--up)}.down{color:var(--down)}.flat{color:var(--muted)}
+button.btn,select,input{font:inherit;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:5px 9px}
+button.btn{cursor:pointer}button.btn:hover{background:var(--hover)}
+button.btn.on{background:var(--accent);border-color:var(--accent);color:#fff}
+button.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{border:0;border-right:1px solid var(--line);background:var(--panel);color:var(--fg);padding:5px 10px;font:inherit;cursor:pointer}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--accent);color:#fff}
+label.lbl{color:var(--muted);font-size:12px;margin-right:4px}
+.tblwrap{overflow:auto;max-height:70vh;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{padding:6px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th{position:sticky;top:0;background:var(--panel);font-weight:600;color:var(--muted);font-size:12px;z-index:1}
+th:first-child,td:first-child{text-align:left;position:sticky;left:0;background:var(--panel)}
+th:first-child{z-index:2}
+tr:hover td{background:var(--hover)}
+tr.sep td{border-top:2px solid var(--line)}
+.chart{width:100%;min-height:380px}
+.picker{max-height:560px;overflow:auto;margin-top:8px}
+.grp{border-bottom:1px solid var(--line);padding:6px 0}
+.grp .gn{font-size:13px;font-weight:600;cursor:pointer;display:flex;justify-content:space-between}
+.grp .gn span{color:var(--muted);font-weight:400;font-size:11px}
+.chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}
+.chip{border:1px solid var(--line);border-radius:12px;padding:1px 8px;font-size:12px;cursor:pointer;background:var(--panel);color:var(--fg)}
+.chip:hover{border-color:var(--accent)}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.tag{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:14px;padding:2px 4px 2px 10px;font-size:12px}
+.tag i{width:10px;height:10px;border-radius:50%;display:inline-block}
+.tag button{border:0;background:none;color:var(--muted);cursor:pointer;font-size:14px;line-height:1;padding:0 4px}
+.stat{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin-top:10px}
+.stat div{background:var(--bg);border-radius:8px;padding:8px 10px}
+.stat b{display:block;font-size:16px;font-variant-numeric:tabular-nums}
+.stat span{font-size:11px;color:var(--muted)}
+.hint{color:var(--muted);font-size:12px}
+.u-legend{font-size:12px;color:var(--fg)}
+.u-legend .u-marker{border-radius:2px}
+.checks{display:flex;flex-wrap:wrap;gap:6px 12px}
+.checks label{display:inline-flex;gap:4px;align-items:center;cursor:pointer;font-size:13px}
+td.heat{color:var(--fg)}
+.crt td,.crt th{padding:5px 8px;text-align:center}
+.crt td:first-child,.crt th:first-child{text-align:left}
+.smgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media (max-width:1000px){.smgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:640px){.smgrid{grid-template-columns:1fr}}
+.smcard{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-width:0}
+.smcard .hd{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.smcard .tt{font-weight:650;font-size:13px}
+.smcard .mt{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.smcard .mt b{color:var(--fg);font-size:15px}
+.smcard .u-legend{display:none}
+.smcard .hv{font-family:var(--mono);font-size:12px;color:var(--amber);min-height:17px;margin-top:2px}.smcard .hv b{color:var(--fg)}.smcard .hv .d{color:var(--muted)}
+.rdgrid{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:14px;align-items:start}
+@media (max-width:1000px){.rdgrid{grid-template-columns:1fr}}
+#rdChart{position:relative}
+.rdtip{position:absolute;pointer-events:none;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 9px;font-size:12px;line-height:1.5;box-shadow:0 2px 8px rgba(0,0,0,.12);white-space:nowrap;z-index:3}
+.rdleg{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--muted);margin-top:6px}
+.rdleg span{display:inline-flex;align-items:center;gap:6px}.rdleg i{display:inline-block;width:18px;height:3px;border-radius:2px}
+.rdhead{border-bottom:1px solid var(--line);padding-bottom:10px;margin-bottom:6px}
+.rdbig{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;margin:4px 0}
+.rdt td,.rdt th{padding:6px 8px}.rdt td .hint{font-size:11px}
+/* ===== 블룸버그 터미널풍 스타일 ===== */
+body{font:13px/1.4 "Pretendard","Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif}
+header{background:var(--head);border-bottom:2px solid var(--amber);padding:6px 14px;gap:14px}
+header h1{background:var(--amber);color:#000;padding:3px 9px;font:800 13px/1.3 var(--mono);letter-spacing:2px;text-transform:uppercase}
+header .meta{color:var(--amber);font-family:var(--mono);font-size:11px;opacity:.85}
+header .btn{background:transparent;border-color:#444;color:#ddd}
+nav{gap:0;counter-reset:fk}
+nav button{border-radius:0;color:#c8c8c8;font-size:12.5px;padding:6px 11px;border-bottom:2px solid transparent;margin-bottom:-8px}
+nav button::before{counter-increment:fk;content:counter(fk);font:700 10px var(--mono);color:#000;background:#9a9a9a;padding:0 3px;margin-right:6px;vertical-align:1px}
+nav button:hover{background:#151515;color:var(--amber)}
+nav button.on{background:transparent;color:var(--amber);border-bottom-color:var(--amber);font-weight:700}
+nav button.on::before{background:var(--amber)}
+main{padding:10px 14px;max-width:1600px}
+.panel{border-radius:2px;padding:10px 12px;margin-bottom:10px}
+.panel h2{font-size:11.5px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid var(--line);padding-bottom:6px;margin:0 0 8px}
+.cards{gap:8px;margin-bottom:10px}
+.card{border-radius:2px;border-left:3px solid var(--amber);padding:8px 12px}
+.card .k{color:var(--amber);font-size:11px;letter-spacing:.3px}
+.card .v{font-family:var(--mono);font-size:22px;color:var(--fg)}
+.card .c{font-family:var(--mono)}
+button.btn,select,input{border-radius:2px;padding:4px 8px;font-size:12.5px;background:var(--bg)}
+input,select{font-family:var(--mono)}
+button.btn.on,button.btn.primary{background:var(--amber);border-color:var(--amber);color:var(--on-accent);font-weight:700}
+.seg{border-radius:2px}
+.seg button{padding:4px 10px;font-size:12px;background:var(--bg)}
+.seg button.on{background:var(--amber);color:var(--on-accent);font-weight:700}
+.tblwrap{border-radius:2px}
+table{font-size:12.5px}
+th,td{padding:4px 9px;border-bottom:1px solid var(--line)}
+th{background:var(--th);color:var(--amber);font-size:11px;font-weight:700;letter-spacing:.3px}
+th:first-child{background:var(--th)}
+td{font-family:var(--mono)}
+td:first-child{font-family:inherit}
+tbody tr:nth-child(even) td{background:var(--zebra)}
+tr:hover td{background:var(--hover)}
+.chip{border-radius:2px;font-size:11.5px;background:var(--bg)}
+.chip.on{background:var(--amber);border-color:var(--amber);color:var(--on-accent);font-weight:700}
+.tag{border-radius:2px}
+.stat{gap:6px}
+.stat div{background:var(--bg);border:1px solid var(--line);border-radius:2px;padding:6px 9px}
+.stat span{color:var(--amber);font-size:10.5px;letter-spacing:.3px}
+.stat b{font-family:var(--mono);font-size:16px}
+.u-legend{font-family:var(--mono);font-size:11px}
+.smcard,.rdtip{border-radius:2px}
+.smcard .tt{color:var(--amber);font-size:12px}
+.smcard .mt{font-family:var(--mono)}
+.rdbig{font-family:var(--mono)}
+.hint{font-size:11.5px}
+::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:#333;border:2px solid var(--bg)}:root[data-theme="light"] ::-webkit-scrollbar-thumb{background:#bbb}
+:root[data-theme="light"] nav button{color:#4b5563}
+:root[data-theme="light"] nav button:hover{background:var(--hover);color:var(--amber)}
+:root[data-theme="light"] nav button::before{color:#fff;background:#9ca3af}
+:root[data-theme="light"] nav button.on::before{background:var(--amber)}
+:root[data-theme="light"] header .btn{border-color:var(--line);color:var(--fg)}
+:root[data-theme="light"] .card .v{color:#111}
+.usgrid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:10px;align-items:start}
+@media (max-width:1100px){.usgrid{grid-template-columns:1fr}}
+.cvpick{display:grid;grid-template-columns:76px 1fr;gap:6px 12px;align-items:center;margin:8px 0 4px;padding:8px 10px;background:var(--bg);border:1px solid var(--line);border-radius:2px}
+.cvpick .cl{font-size:11px;font-weight:700;color:var(--amber);letter-spacing:.3px;text-align:right}
+.cvpick .chips{margin:0;gap:5px}
+.cvpick .chip{font:600 12px var(--mono);padding:3px 9px;min-width:44px;text-align:center;background:var(--panel);transition:background .1s}
+.cvpick .chip.on{color:#fff}
+#err{display:none;padding:40px;text-align:center}
+</style>
+</head>
+<body>
+<header>
+  <h1>Yield Box</h1>
+  <nav id="nav">
+    <button data-tab="dash" class="on">대시보드</button>
+    <button data-tab="ts">시계열</button>
+    <button data-tab="spread">스프레드</button>
+    <button data-tab="curve">커브</button>
+    <button data-tab="ust">기간프리미엄</button>
+    <button data-tab="tpu">TP 활용</button>
+    <button data-tab="fwd">선도금리</button>
+    <button data-tab="kfut">국채선물</button>
+    <button data-tab="roll">롤다운</button>
+    <button data-tab="matrix">매트릭스</button>
+    <button data-tab="table">데이터</button>
+  </nav>
+  <div class="spacer"></div>
+  <span class="meta" id="meta"></span>
+  <button class="btn" id="dataBtn" title="데이터 파일(data.js) 불러오기·교체" style="display:none">데이터 불러오기</button>
+  <input type="file" id="dataFile" accept=".js,.json" style="display:none">
+  <button class="btn" id="themeBtn" title="테마 전환">◐</button>
+</header>
+<div id="err" class="panel"></div>
+<main>
+  <!-- 대시보드 -->
+  <section class="tab on" id="tab-dash">
+    <div class="cards" id="dashCards"></div>
+    <div class="panel">
+      <div class="row" style="justify-content:space-between"><h2>주요 금리 · 변동(bp)</h2><span class="hint" id="dashAsOf"></span></div>
+      <div class="tblwrap" style="max-height:none"><table id="dashTbl"></table></div>
+    </div>
+    <div class="panel">
+      <div class="row" style="justify-content:space-between"><h2>국고 3Y·10Y · 기준금리 · 10Y−3Y 스프레드</h2><div id="dashRange"></div></div>
+      <div class="chart" id="dashChart"></div>
+    </div>
+  </section>
+
+  <!-- 시계열 -->
+  <section class="tab" id="tab-ts">
+    <div class="grid2">
+      <div class="panel">
+        <h2>시리즈 선택</h2>
+        <input id="pickSearch" placeholder="검색 (예: 국고 10Y, AA-, IRS)" style="width:100%">
+        <div class="tags" id="pickTags"></div>
+        <div class="picker" id="picker"></div>
+      </div>
+      <div>
+        <div class="panel">
+          <div class="row" style="justify-content:space-between">
+            <div id="tsRange"></div>
+            <div class="seg" id="tsMode"><button data-m="lvl" class="on">금리(%)</button><button data-m="chg">시작일 대비(bp)</button></div>
+          </div>
+          <div class="chart" id="tsChart" style="margin-top:10px"></div>
+          <div class="hint">차트를 오른쪽으로 드래그하면 확대, 왼쪽으로 드래그하면 축소, 더블클릭하면 원래대로. 범례를 클릭하면 시리즈를 숨길 수 있습니다.</div>
+        </div>
+        <div class="panel"><h2>구간 통계</h2><div class="tblwrap" style="max-height:none"><table id="tsStats"></table></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 스프레드 -->
+  <section class="tab" id="tab-spread">
+    <div class="seg" id="spSub" style="margin-bottom:12px"><button data-v="detail">크레딧 상세</button><button data-v="grid">크레딧 한눈에</button><button data-v="bs">본드스왑</button></div>
+    <div id="spDetail">
+    <div class="panel">
+      <div class="row">
+        <span><label class="lbl">A</label><select id="spAg"></select> <select id="spAt"></select></span>
+        <span style="color:var(--muted)">−</span>
+        <span><label class="lbl">B</label><select id="spBg"></select> <select id="spBt"></select></span>
+        <button class="btn" id="spSwap">⇄</button>
+        <span class="hint">빠른 선택:</span>
+        <span id="spPresets" class="row" style="gap:6px"></span>
+      </div>
+      <div class="row" style="margin-top:10px"><div id="spRange"></div></div>
+      <div class="row" style="margin-top:8px;gap:10px">
+        <label class="checks"><label><input type="checkbox" id="spExOn"> 통계 제외 기간</label></label>
+        <span><label class="lbl">제외시작</label><input type="date" id="spExA"></span>
+        <span><label class="lbl">제외종료</label><input type="date" id="spExB"></span>
+        <span class="hint" id="spExInfo"></span>
+      </div>
+      <div class="stat" id="spStat"></div>
+      <div class="chart" id="spChart" style="margin-top:10px"></div>
+    </div>
+    <div class="panel">
+      <div class="row" style="justify-content:space-between">
+        <h2>크레딧 스프레드 변동 (국고 대비, bp)</h2>
+        <div class="row"><span class="checks" id="crPer"></span><span class="hint" id="crAsOf"></span></div>
+      </div>
+      <div id="crWrap"></div>
+      <p class="hint" style="margin:8px 0 0">파랑 = 스프레드 확대(+), 빨강 = 축소(−). 색 진하기는 표마다 최대 변동폭 기준입니다. 칸을 클릭하면 위 차트에 해당 스프레드가 표시됩니다.</p>
+    </div>
+    </div>
+    <div id="spGrid" style="display:none">
+      <div class="panel">
+        <div class="row">
+          <div class="seg" id="gdMode"><button data-m="group">종류 선택 → 테너별</button><button data-m="tenor">테너 선택 → 종류별</button></div>
+          <span id="gdPickWrap"><select id="gdGroup"></select><select id="gdTenor"></select></span>
+          <span><label class="lbl">통계 기간</label></span><div id="gdRange"></div>
+        </div>
+        <div class="chips" id="gdChips" style="margin-top:10px"></div>
+        <p class="hint" style="margin:8px 0 0">모두 국고 같은 테너 대비 스프레드(bp)입니다. 배경 띠 = 통계 기간(기본 전체) 평균 ±1σ·±2σ, 상세 탭의 통계 제외 기간 반영. 차트는 최근 5개월부터 보이며, 왼쪽으로 드래그하면 더 과거까지 볼 수 있습니다. 한 차트를 드래그하면 모든 차트가 함께 확대·축소됩니다.</p>
+      </div>
+      <div class="smgrid" id="gdCards"></div>
+    </div>
+    <div id="spBs" style="display:none">
+      <div class="panel">
+        <div class="row" style="justify-content:space-between"><h2>본드스왑 스프레드 요약 (IRS − 국고·통안, bp)</h2><span class="hint" id="bsAsOf"></span></div>
+        <div class="tblwrap" style="max-height:none"><table id="bsTbl"></table></div>
+        <p class="hint" style="margin:6px 0 0">스왑 스프레드 = IRS − 같은 만기 채권금리. 음수면 채권금리가 IRS보다 높음. 백분위 = 2013년 이후 일별 값 중 현재 이하 비율. 크레딧과 달리 통계 제외 기간은 적용하지 않습니다.</p>
+      </div>
+      <div class="panel">
+        <div class="row" style="justify-content:space-between">
+          <h2>만기별 스왑 스프레드 커브</h2>
+          <div class="row"><span class="checks" id="bsCmp"></span><label class="checks"><label><input type="checkbox" id="bsMsb" checked> 통안(단기) 같이 보기</label></label></div>
+        </div>
+        <div class="chart" id="bsCurve" style="min-height:320px"></div>
+      </div>
+      <div class="panel">
+        <div class="row" style="justify-content:space-between">
+          <h2>만기별 시계열</h2>
+          <div class="row"><span><label class="lbl">통계 기간</label></span><div id="bsRange"></div></div>
+        </div>
+        <div class="chips" id="bsChips"></div>
+        <p class="hint" style="margin:6px 0 0">배경 띠 = 통계 기간 평균 ±1σ·±2σ. 차트는 최근 5개월부터 보이며 드래그하면 함께 확대·축소됩니다.</p>
+      </div>
+      <div class="smgrid" id="bsCards"></div>
+    </div>
+  </section>
+
+  <!-- 커브 -->
+  <section class="tab" id="tab-curve">
+    <div class="panel">
+      <div class="row" style="justify-content:space-between;align-items:baseline">
+        <h2 style="margin:0;border:0;padding:0">커브 선택</h2>
+        <span class="hint" id="cvSelInfo"></span>
+      </div>
+      <div class="cvpick" id="cvGroups"></div>
+      <div class="row" style="margin-top:12px">
+        <span><label class="lbl">기준일</label><input type="date" id="cvDate"></span>
+        <span><label class="lbl">비교</label><span class="checks" id="cvCmp" style="display:inline-flex"></span></span>
+        <span><label class="lbl">직접 지정</label><input type="date" id="cvCustom"></span>
+        <label class="checks"><label><input type="checkbox" id="cvLog" checked> 만기축 로그</label></label>
+      </div>
+      <div class="chart" id="cvChart" style="margin-top:10px"></div>
+    </div>
+    <div class="panel"><h2>커브 값</h2><div class="tblwrap" style="max-height:none"><table id="cvTbl"></table></div></div>
+  </section>
+
+  <!-- 미국채 -->
+  <section class="tab" id="tab-ust">
+    <div class="row" style="margin-bottom:10px"><div class="seg" id="usCty"><button data-c="US">미국 (뉴욕연준 ACM)</button><button data-c="KR">한국 (국고 ACM 자체추정)</button></div>
+      <span class="hint" id="usCtyNote"></span></div>
+    <div class="cards" id="usCards"></div>
+    <div class="panel" id="usNoAcm" style="display:none"><p class="hint">ACM 데이터가 없습니다. 뉴욕연준에서 받은 <b>ACMTermPremium.xls</b> 를 플랫폼 폴더나 다운로드 폴더에 두고 <b>업데이트.bat</b> 을 실행하세요.</p></div>
+    <div class="panel">
+      <div class="row" style="justify-content:space-between">
+        <h2 id="usDecTitle">금리 분해 (ACM)</h2>
+        <div class="row"><span><label class="lbl">만기</label><select id="usMat"></select></span><div id="usRange"></div></div>
+      </div>
+      <div class="chart" id="usDecChart"></div>
+      <p class="hint" style="margin:6px 0 0">실제 = 미국채 시장금리 · 모형 = ACM 무이표 적합금리 · 위험중립 = 앞으로 n년 단기금리 기대 평균 · 기간프리미엄(우축, bp) = 모형 − 위험중립.
+        ACM은 뉴욕연준 추정치로 시장금리보다 며칠 늦게 갱신됩니다.</p>
+    </div>
+    <div class="usgrid">
+      <div class="panel">
+        <div class="row" style="justify-content:space-between">
+          <h2>만기별 커브 (ACM)</h2>
+          <div class="row"><div class="seg" id="usKind"><button data-k="TP">기간프리미엄</button><button data-k="RN">위험중립</button><button data-k="Y">모형금리</button></div>
+            <span class="checks" id="usCmp"></span></div>
+        </div>
+        <div class="chart" id="usCurve" style="min-height:320px"></div>
+      </div>
+      <div class="panel">
+        <div class="row" style="justify-content:space-between"><h2>만기별 분해 · 변동(bp)</h2><span class="hint" id="usAsOf"></span></div>
+        <div class="tblwrap" style="max-height:none"><table id="usTbl"></table></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="row" style="justify-content:space-between"><h2>한·미 기간프리미엄 비교 (bp)</h2>
+        <div class="row"><span><label class="lbl">만기</label><select id="usCmpMat"></select></span><div id="usCmpRange"></div></div></div>
+      <div class="chart" id="usCmpChart"></div>
+    </div>
+  </section>
+
+  <!-- TP 활용 -->
+  <section class="tab" id="tab-tpu">
+    <div class="row" style="margin-bottom:10px">
+      <div class="seg" id="tpuCty"><button data-c="ALL">한눈에 보기</button><button data-c="KR">한국</button><button data-c="US">미국</button></div>
+      <span id="tpuMatWrap"><label class="lbl">만기</label><select id="tpuMat"></select></span>
+      <span class="hint">분석 참고용 화면입니다. 특정 매매를 권유하지 않습니다.</span>
+    </div>
+
+    <div class="panel" id="tpuAllPanel">
+      <div class="row" style="justify-content:space-between"><h2>한눈에 보기 — 금리 변동 원인 분해 (bp)</h2><span class="hint">실제 금리 Δ = 정책기대(위험중립) Δ + 기간프리미엄 Δ + 모형오차</span></div>
+      <div class="tblwrap" style="max-height:none"><table id="tpuAllTbl"></table></div>
+    </div>
+    <div class="panel tpuOne">
+      <div class="row" style="justify-content:space-between"><h2>① 금리 변동 원인 분해 — 정책기대 vs 기간프리미엄</h2><span class="hint" id="tpuDecAsOf"></span></div>
+      <div class="tblwrap" style="max-height:none"><table id="tpuDecTbl"></table></div>
+      <div class="row" style="justify-content:space-between;margin-top:12px"><span class="hint">선택 구간 시작일 대비 누적 변동(bp)</span><div id="tpuDecRange"></div></div>
+      <div class="chart" id="tpuDecChart" style="min-height:320px"></div>
+      <p class="hint" style="margin:6px 0 0">실제 금리 변동 = 위험중립(정책금리 기대) 변동 + 기간프리미엄 변동 + 모형오차. 같은 상승이라도 프리미엄 주도(수급·재정·불확실성)인지 정책기대 주도인지 구분하는 용도입니다.</p>
+    </div>
+
+    <div class="panel tpuOne">
+      <div class="row" style="justify-content:space-between"><h2>② 밸류에이션 위치 — 기간프리미엄이 과거 대비 어디쯤인가</h2><span class="hint">2013년 이후 일별 기준</span></div>
+      <div class="stat" id="tpuValStat"></div>
+      <div class="chart" id="tpuValChart" style="min-height:320px;margin-top:10px"></div>
+      <p class="hint" style="margin:6px 0 0">배경 띠 = 평균 ±1σ·±2σ. 타이밍 신호보다는 듀레이션을 생각할 때 참고하는 배경 지표로 보세요 (실시간 검증에서 12개월 수익률 설명력은 낮았습니다).</p>
+    </div>
+
+    <div class="panel tpuOne">
+      <h2>③ 신호판 — 다른 지표와 함께 보기</h2>
+      <div class="tblwrap" style="max-height:none"><table id="tpuSigTbl"></table></div>
+      <p class="hint" style="margin:6px 0 0">백분위 = 2013년 이후 일별 값 중 현재값 이하 비율. '시장 내재'는 선도금리(부트스트랩 FF), '모형 기대'는 ACM 위험중립 금리입니다. 25bp = 1회로 환산.</p>
+    </div>
+
+    <div class="panel">
+      <div class="row" style="justify-content:space-between"><h2>④ 한·미 같은 조건 비교 (bp)</h2><div id="tpuCmpRange"></div></div>
+      <div class="stat" id="tpuCmpStat"></div>
+      <div class="chart" id="tpuCmpChart" style="min-height:320px;margin-top:10px"></div>
+      <p class="hint" style="margin:6px 0 0">'미국 동일조건'은 연준 무이표 금리로 국고와 똑같은 설정(팩터 3개, 2001년~ 월말)으로 추정한 값입니다. 뉴욕연준 공식값(1961년~, 팩터 5개)과 수준을 직접 비교하면 결론이 뒤집힐 수 있어, 국가 비교는 동일조건 값으로 보세요.</p>
+    </div>
+  </section>
+
+  <!-- 국채선물 -->
+  <section class="tab" id="tab-kfut">
+    <div class="row" style="margin-bottom:10px">
+      <div class="seg" id="kfProd"><button data-p="3Y">3년 국채선물</button><button data-p="10Y">10년 국채선물</button></div>
+      <span><label class="lbl">이동평균</label><input type="number" id="kfMa" min="5" max="120" style="width:60px">일</span>
+      <span class="hint">가격은 연결선물 <b>수정가</b>(롤오버 갭 보정). 변화는 틱(0.01) 단위.</span>
+    </div>
+    <div class="cards" id="kfCards"></div>
+    <div class="panel">
+      <div class="row" style="justify-content:space-between"><h2 id="kfTitle">수정가 · 이동평균 · CTA 국면</h2><div id="kfRange"></div></div>
+      <div class="chart" id="kfPrice" style="min-height:360px"></div>
+      <div class="chart" id="kfFlow" style="min-height:240px;margin-top:6px"></div>
+      <p class="hint" style="margin:6px 0 0">배경: 초록 = 수정가가 이동평균 위(추세추종 매수 국면), 빨강 = 아래(매도 국면). 아래 차트: 외국인 일별 순매수(막대), 20일 누적·기간 누적(선, 우축). 기간 누적은 기간 버튼으로 고른 시작일부터 다시 0에서 쌓입니다. 두 차트는 함께 확대·축소됩니다.</p>
+    </div>
+    <div class="usgrid">
+      <div class="panel">
+        <div class="row" style="justify-content:space-between"><h2>외국인 순매수와의 연관성</h2><span class="hint" id="kfRelNote"></span></div>
+        <div class="tblwrap" style="max-height:none"><table id="kfRel"></table></div>
+        <div class="chart" id="kfCorr" style="min-height:200px;margin-top:10px"></div>
+      </div>
+      <div class="panel">
+        <div class="row" style="justify-content:space-between"><h2>이동평균 돌파 이벤트 (최근)</h2><span class="hint">변화: 틱 · 외국인: 계약</span></div>
+        <div class="tblwrap" style="max-height:520px"><table id="kfEv"></table></div>
+      </div>
+    </div>
+    <p class="hint">분석 참고용입니다. 추세추종 성과는 거래비용·슬리피지·롤오버 비용을 반영하지 않은 단순 계산이며, 특정 매매를 권유하지 않습니다.</p>
+  </section>
+
+  <!-- 선도금리 -->
+  <section class="tab" id="tab-fwd">
+    <div class="panel">
+      <div class="row">
+        <label class="lbl">계산 방식</label>
+        <div class="seg" id="fwMode">
+          <button data-m="SIMPLE">단순 복리 (선도금리 시트)</button>
+          <button data-m="FF">부트스트랩 FF (선도금리_new)</button>
+          <button data-m="LZ">부트스트랩 LZ (인포맥스 2620)</button>
+        </div>
+        <label class="checks"><label><input type="checkbox" id="fwExtra"> IRS 7·8·9Y도 사용 (엑셀은 미사용)</label></label>
+      </div>
+      <p class="hint" id="fwNote" style="margin:8px 0 0"></p>
+    </div>
+    <div class="panel">
+      <div class="row" style="justify-content:space-between"><h2>선도금리 현황 · 변동(bp)</h2><span class="hint" id="fwAsOf"></span></div>
+      <div class="tblwrap" style="max-height:none"><table id="fwTbl"></table></div>
+      <div class="row" style="margin-top:10px;gap:8px">
+        <input id="fwCustomIn" placeholder="직접 추가: 2Yx3M, 1Yx2Y, 6Mx1D" style="width:240px">
+        <button class="btn" id="fwAdd">추가</button>
+        <span class="hint">시작×기간 형식. 단순 방식은 CD·IRS 호가가 있는 만기 조합만 계산됩니다.</span>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="row" style="justify-content:space-between">
+        <div id="fwRange"></div>
+        <div class="checks" id="fwOverlay"><label><input type="checkbox" value="기준금리" checked>기준금리</label><label><input type="checkbox" value="CD 3M">CD 3M</label></div>
+      </div>
+      <div class="chips" id="fwChips" style="margin-top:10px"></div>
+      <div class="chart" id="fwChart" style="margin-top:10px"></div>
+      <h2 style="margin-top:16px">내재 인상 횟수 (25bp 기준)</h2>
+      <p class="hint" style="margin:0 0 6px">(선도금리 − 그날의 기준금리) ÷ 0.25%p. 예) 기준금리 3.00%, 3Mx3M 3.495% → +1.98회. 양수는 인상, 음수는 인하를 반영한 값입니다.</p>
+      <div class="chart" id="fwHikeChart" style="min-height:300px"></div>
+      <div class="hint">오른쪽 드래그 확대 · 왼쪽 드래그 축소 · 더블클릭 복귀 (두 차트가 함께 움직입니다)</div>
+    </div>
+    <div class="panel">
+      <div class="row" style="justify-content:space-between">
+        <h2>내재 3M 금리 경로 (3M 선도 체인)</h2>
+        <div class="row"><span><label class="lbl">기준일</label><input type="date" id="fwDate"></span><span class="checks" id="fwCmp"></span></div>
+      </div>
+      <p class="hint" id="fwPathNote" style="margin:0 0 8px"></p>
+      <div class="chart" id="fwPath"></div>
+      <div class="tblwrap" style="max-height:none;margin-top:10px"><table id="fwPathTbl"></table></div>
+    </div>
+  </section>
+
+  <!-- 롤다운 -->
+  <section class="tab" id="tab-roll">
+    <div class="panel">
+      <div class="row">
+        <span><label class="lbl">매수일</label><input type="date" id="rdA"></span>
+        <span><label class="lbl">평가일</label><input type="date" id="rdB"></span>
+        <label class="checks"><label><input type="checkbox" id="rdToday"> 오늘 (평가일 = 최신일)</label></label>
+        <span><label class="lbl">발행주체</label><select id="rdGroup"></select></span>
+        <span><label class="lbl">만기 T</label><input type="number" id="rdT" step="0.25" min="0.25" max="10" style="width:80px"> 년</span>
+      </div>
+      <p class="hint" id="rdInfo" style="margin:8px 0 0"></p>
+    </div>
+    <div class="rdgrid">
+      <div class="panel">
+        <div class="chart" id="rdChart" style="min-height:420px"></div>
+        <div id="rdLegend" class="rdleg"></div>
+        <p class="hint" style="margin:6px 0 0">매수일 커브의 점을 클릭하면 그 만기를 T로 다시 계산합니다. 초록 실선 = 롤다운(T → T₂), 빨강 점선 = 커브 변화(T₂에서 위아래).</p>
+      </div>
+      <div class="panel" id="rdOut"></div>
+    </div>
+    <div class="panel">
+      <h2>BEP · 손익분기 매도금리</h2>
+      <div class="row">
+        <span><label class="lbl">보유기간</label><input type="number" id="bpN" min="1" max="120" step="1" style="width:70px"> 개월</span>
+        <span><label class="lbl">조달금리</label><select id="bpF"><option value="none">없음 (0%)</option><option value="콜금리">콜금리</option><option value="CD 3M">CD 3M</option><option value="기준금리">기준금리</option><option value="custom">직접 입력</option></select>
+          <input type="number" id="bpFv" step="0.01" style="width:80px"> %</span>
+        <span class="hint" id="bpInfo"></span>
+      </div>
+      <div id="bpOut" style="margin-top:10px"></div>
+      <div class="tblwrap" style="max-height:none;margin-top:10px"><table id="bpTbl"></table></div>
+      <p class="hint" style="margin:8px 0 0">평가일 커브에서 만기 T 를 매수(YTM y₀)해 N개월 보유 후 잔존 T₂ 로 매도한다고 볼 때,
+        이자(캐리)와 롤다운 이익을 매도 시 가격손실이 모두 상쇄하는 T₂ 금리가 BEP입니다.
+        BEP = y₀ + (y₀ − 조달금리) × Δ / T₂ (가격민감도 ≈ T₂ 근사). 커브 불변 시 매도금리는 y(T₂) 이고, BEP − y(T₂) 만큼이 금리 상승 여유입니다.</p>
+    </div>
+  </section>
+
+  <!-- 매트릭스 -->
+  <section class="tab" id="tab-matrix">
+    <div class="panel">
+      <div class="row">
+        <div class="seg" id="mxMode">
+          <button data-m="lvl" class="on">금리(%)</button>
+          <button data-m="spr">국고 대비 스프레드(bp)</button>
+          <button data-m="chg">기간 변동(bp)</button>
+          <button data-m="sprchg">스프레드 변동(bp)</button>
+        </div>
+        <span><label class="lbl">기준일</label><input type="date" id="mxDate"></span>
+        <span id="mxPeriodWrap"><label class="lbl">비교기간</label><select id="mxPeriod"></select></span>
+      </div>
+      <div class="tblwrap" style="margin-top:12px;max-height:none"><table id="mxTbl"></table></div>
+    </div>
+  </section>
+
+  <!-- 데이터 -->
+  <section class="tab" id="tab-table">
+    <div class="panel">
+      <div class="row" style="justify-content:space-between">
+        <div class="row"><div id="tbRange"></div></div>
+        <div class="row">
+          <span class="hint" id="tbInfo"></span>
+          <button class="btn primary" id="tbCsv">CSV 다운로드</button>
+        </div>
+      </div>
+      <p class="hint" style="margin:8px 0">표시 열은 <b>시계열</b> 탭에서 고른 시리즈입니다.</p>
+      <div class="tblwrap"><table id="tbTbl"></table></div>
+    </div>
+  </section>
+</main>
+
+<script>
+function YB_MAIN(){
+"use strict";
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const err=$("#err");
+if(!window.DB){err.style.display="block";err.innerHTML="<b>data.js 를 찾을 수 없습니다.</b><br>같은 폴더에서 <code>업데이트.bat</code>(또는 <code>python build_db.py</code>)를 먼저 실행하세요.";return;}
+if(!window.uPlot){err.style.display="block";err.innerHTML="차트 라이브러리를 불러오지 못했습니다. 인터넷 연결을 확인하세요.";}
+
+/* ---------- 데이터 ---------- */
+const DB=window.DB, DATES=DB.dates, N=DATES.length, SC=DB.scale;
+const TS=DATES.map(d=>Date.parse(d+"T00:00:00")/1000);
+const S=DB.series.map(s=>({...s,v:s.v.map(x=>x==null?null:x/SC)}));
+const BYNAME=Object.fromEntries(S.map(s=>[s.name,s]));
+const GROUPS=[];{const seen=new Set();for(const s of S)if(!seen.has(s.group)){seen.add(s.group);GROUPS.push(s.group);}}
+const BYGROUP=Object.fromEntries(GROUPS.map(g=>[g,S.filter(s=>s.group===g)]));
+const LAST=N-1;
+$("#meta").textContent=`${DATES[0]} ~ ${DATES[LAST]} · ${S.length}개 시리즈 · 갱신 ${DB.built}${window.YB_FROM_IDB?" · 브라우저 저장본":""}`;
+
+const PAL=["#f59e0b","#0284c7","#16a34a","#db2777","#ca8a04","#7c3aed","#dc2626","#0d9488","#64748b","#ea580c"];
+const store={get(k,d){try{const v=localStorage.getItem("rdb:"+k);return v==null?d:JSON.parse(v);}catch(e){return d;}},
+             set(k,v){try{localStorage.setItem("rdb:"+k,JSON.stringify(v));}catch(e){}}};
+
+function idxOnOrBefore(ds){let lo=0,hi=LAST,r=-1;while(lo<=hi){const m=(lo+hi)>>1;if(DATES[m]<=ds){r=m;lo=m+1;}else hi=m-1;}return r;}
+function idxOnOrAfter(ds){let lo=0,hi=LAST,r=N;while(lo<=hi){const m=(lo+hi)>>1;if(DATES[m]>=ds){r=m;hi=m-1;}else lo=m+1;}return r;}
+function valAt(s,i){for(let k=i;k>=0&&k>i-15;k--){if(s.v[k]!=null)return s.v[k];}return null;}
+function ymd(dt){return dt.toISOString().slice(0,10);}
+function shiftIdx(i,p){
+  if(p==="1D")return Math.max(0,i-1);
+  const d=new Date(DATES[i]+"T00:00:00Z");
+  // WTD/MTD/QTD/YTD: 직전 주·월·분기·연도의 마지막 영업일 종가 기준
+  if(p==="WTD"){d.setUTCDate(d.getUTCDate()-((d.getUTCDay()+6)%7)-1);return idxOnOrBefore(ymd(d));}
+  if(p==="MTD")return idxOnOrBefore(ymd(new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),0))));
+  if(p==="QTD")return idxOnOrBefore(ymd(new Date(Date.UTC(d.getUTCFullYear(),Math.floor(d.getUTCMonth()/3)*3,0))));
+  if(p==="YTD")return idxOnOrBefore((d.getUTCFullYear()-1)+"-12-31");
+  const m=p.match(/^(\d+)([WMY])$/);if(!m)return i;const n=+m[1];
+  if(m[2]==="W")d.setUTCDate(d.getUTCDate()-7*n);
+  if(m[2]==="M")d.setUTCMonth(d.getUTCMonth()-n);
+  if(m[2]==="Y")d.setUTCFullYear(d.getUTCFullYear()-n);
+  return idxOnOrBefore(ymd(d));
+}
+const f3=v=>v==null?"-":v.toFixed(3);
+// 비교 시점 라벨: WTD 는 전주 마지막 영업일
+function pLab(p){return p==="WTD"?"전주말":`${p}전`;}
+const fbp=v=>v==null||isNaN(v)?"-":Math.abs(v)<0.05?"0.0":(v>0?"+":"")+v.toFixed(1);
+const cls=v=>v==null||isNaN(v)||Math.abs(v)<0.05?"flat":v>0?"up":"down";
+
+/* ---------- 테마 ---------- */
+const root=document.documentElement;
+root.dataset.theme=store.get("theme2","light");
+$("#themeBtn").onclick=()=>{root.dataset.theme=root.dataset.theme==="light"?"dark":"light";store.set("theme2",root.dataset.theme);redrawAll();};
+// 숫자키 1~8 로 탭 이동 (입력칸 밖에서)
+document.addEventListener("keydown",e=>{if(e.ctrlKey||e.altKey||e.metaKey||/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName))return;const b=$$("#nav button")[+e.key-1];if(b)b.click();});
+const css=n=>getComputedStyle(root).getPropertyValue(n).trim();
+
+/* ---------- 탭 ---------- */
+const renders={};
+let curTab="dash";
+$("#nav").onclick=e=>{const b=e.target.closest("button");if(!b)return;curTab=b.dataset.tab;
+  $$("#nav button").forEach(x=>x.classList.toggle("on",x===b));
+  $$(".tab").forEach(x=>x.classList.toggle("on",x.id==="tab-"+curTab));
+  renders[curTab]&&renders[curTab]();};
+function redrawAll(){renders[curTab]&&renders[curTab]();}
+let rT;window.addEventListener("resize",()=>{clearTimeout(rT);rT=setTimeout(redrawAll,150);});
+
+/* ---------- 기간 선택 위젯 ---------- */
+function rangeBar(el,key,def,onChange){
+  const presets=["1M","3M","6M","1Y","3Y","5Y","10Y","전체"];
+  let st=store.get("range:"+key,{p:def});
+  el.innerHTML=`<div class="row" style="gap:8px"><div class="seg">${presets.map(p=>`<button data-p="${p}">${p}</button>`).join("")}</div>
+    <input type="date" min="${DATES[0]}" max="${DATES[LAST]}"> ~ <input type="date" min="${DATES[0]}" max="${DATES[LAST]}"></div>`;
+  const [a,b]=el.querySelectorAll("input");
+  function calc(){
+    if(st.p){b.value=DATES[LAST];a.value=st.p==="전체"?DATES[0]:DATES[Math.max(0,shiftIdx(LAST,st.p))];}
+    else{a.value=st.a;b.value=st.b;}
+    el.querySelectorAll(".seg button").forEach(x=>x.classList.toggle("on",x.dataset.p===st.p));
+  }
+  el.querySelector(".seg").onclick=e=>{const x=e.target.closest("button");if(!x)return;st={p:x.dataset.p};store.set("range:"+key,st);calc();onChange();};
+  const custom=()=>{if(!a.value||!b.value)return;st={a:a.value,b:b.value};store.set("range:"+key,st);calc();onChange();};
+  a.onchange=custom;b.onchange=custom;calc();
+  return ()=>{let i0=idxOnOrAfter(a.value),i1=idxOnOrBefore(b.value);if(i0>i1)[i0,i1]=[i1,i0];return [Math.max(0,i0),Math.min(LAST,i1)];};
+}
+
+/* ---------- 차트 ---------- */
+const plots={};
+function axis(extra){const g=css("--grid"),m=css("--axis");return Object.assign({stroke:m,grid:{stroke:g,width:1},ticks:{stroke:g,width:1}},extra||{});}
+function tsChart(id,lines,{unit="%",height=380,zero=false,init=null,sync=null,shade=null,bands=null,onCursor=null,y2unit="bp",regions=null,ysize=null,padR=null}={}){
+  const el=document.getElementById(id);
+  if(plots[id]){plots[id].destroy();delete plots[id];}
+  el.innerHTML="";
+  if(!window.uPlot||!lines.length||!lines[0].x.length){el.innerHTML='<p class="hint" style="padding:40px;text-align:center">표시할 데이터가 없습니다.</p>';return;}
+  const dec=unit==="bp"?1:unit==="회"?2:unit==="계약"?0:3,suf=unit==="%"?"":unit;
+  const fmtU=(v,u,d)=>u==="계약"?Math.round(v).toLocaleString()+"계약":u==="bp"?v.toFixed(1)+"bp":v.toFixed(d);
+  const opts={width:el.clientWidth||800,height,
+    scales:{x:{time:true}},
+    series:[{value:(u,v)=>v==null?"-":new Date(v*1000).toLocaleDateString("ko-KR")},
+      ...lines.map(l=>({label:l.label,stroke:l.color,width:l.width||1.9,dash:l.dash,spanGaps:true,
+        // y2: 오른쪽 보조축(bp). fill 은 0 기준 반투명 면
+        scale:l.y2?"y2":"y",fill:l.fill,fillTo:l.fill?(()=>0):undefined,
+        // bars: 막대 (외국인 순매수 등)
+        paths:l.bars?uPlot.paths.bars({size:[0.75,12]}):l.step&&uPlot.paths.stepped?uPlot.paths.stepped({align:1}):undefined,
+        ...(l.bars?{fill:l.color,width:0,points:{show:false}}:{}),
+        value:(u,v)=>v==null?"-":l.y2?fmtU(v,y2unit,3):unit==="계약"?fmtU(v,unit):v.toFixed(dec)+suf}))],
+    axes:[axis(),axis({size:ysize||(unit==="계약"?70:58),values:(u,vs)=>vs.map(v=>unit==="bp"?v.toFixed(0):unit==="회"?v.toFixed(1)+"회":unit==="계약"?Math.round(v).toLocaleString():v.toFixed(2))})],
+    cursor:{drag:{x:true,y:false,setScale:false},sync:sync?{key:sync}:undefined,
+      // 더블클릭: 기간 선택 바에서 고른 구간으로 복귀
+      bind:{dblclick:u=>()=>{if(init)u.setScale("x",{min:init[0],max:init[1]});else u.setScale("x",{min:u.data[0][0],max:u.data[0][u.data[0].length-1]});return null;}}},
+  };
+  if(lines.some(l=>l.y2)){opts.scales.y2={auto:true};
+    opts.axes.push(axis({scale:"y2",side:1,size:y2unit==="계약"?74:54,grid:{show:false},values:(u,vs)=>vs.map(v=>y2unit==="bp"?v.toFixed(0)+"bp":y2unit==="계약"?Math.round(v).toLocaleString():v.toFixed(2))}));}
+  opts.hooks={setSelect:[dragZoom],ready:[u=>u.over.addEventListener("mousedown",e=>{u._downX=e.clientX-u.over.getBoundingClientRect().left;})],
+    // 같은 sync 그룹 차트끼리 X축 확대/축소를 맞춤
+    setScale:[(u,k)=>{if(k!=="x"||!u._sync||u._syncing)return;for(const p of Object.values(plots))if(p!==u&&p._sync===u._sync&&(p.scales.x.min!==u.scales.x.min||p.scales.x.max!==u.scales.x.max)){p._syncing=true;p.setScale("x",{min:u.scales.x.min,max:u.scales.x.max});p._syncing=false;}}]};
+  // 평균 ±1σ·±2σ 배경 띠 (bands={mean,sd,rgb})
+  opts.hooks.drawClear=[];opts.hooks.draw=[];
+  if(padR)opts.padding=[null,padR,null,null];  // 여러 차트 좌우 폭 맞춤용
+  // regions: [[시작ts, 끝ts, 색], ...] 배경 구간 (예: 20일선 위/아래 국면)
+  if(regions)opts.hooks.drawClear.push(u=>{const c=u.ctx,T=u.bbox.top,H=u.bbox.height,L=u.bbox.left,R=L+u.bbox.width;c.save();
+    for(const [a,b,col] of regions){const x1=Math.max(L,u.valToPos(a,"x",true)),x2=Math.min(R,u.valToPos(b,"x",true));if(x2>x1){c.fillStyle=col;c.fillRect(x1,T,x2-x1,H);}}c.restore();});
+  if(onCursor)opts.hooks.setCursor=[u=>onCursor(u,u.cursor.idx)];
+  const dark=root.dataset.theme!=="light";
+  if(bands&&bands.sd>0){
+    // ±1σ 안쪽 청록, 1σ~2σ 주황 + 경계선. 라벨은 선 위에 그려지도록 draw 단계에서
+    opts.hooks.drawClear.push(u=>{const c=u.ctx,L=u.bbox.left,W=u.bbox.width,T=u.bbox.top,H=u.bbox.height,dpr=devicePixelRatio;
+      const yp=v=>Math.min(T+H,Math.max(T,u.valToPos(v,"y",true)));c.save();
+      const band=(lo,hi,col)=>{const y1=yp(bands.mean+hi*bands.sd),y2=yp(bands.mean+lo*bands.sd);c.fillStyle=col;c.fillRect(L,y1,W,y2-y1);};
+      band(-1,1,dark?"rgba(20,184,166,.22)":"rgba(18,165,148,.16)");
+      band(1,2,dark?"rgba(245,158,11,.20)":"rgba(245,158,11,.16)");band(-2,-1,dark?"rgba(245,158,11,.20)":"rgba(245,158,11,.16)");
+      c.lineWidth=1*dpr;c.setLineDash([4*dpr,3*dpr]);
+      for(const [k,col] of [[1,"rgba(45,212,191,.85)"],[-1,"rgba(45,212,191,.85)"],[2,"rgba(251,146,60,.85)"],[-2,"rgba(251,146,60,.85)"]]){
+        const y=u.valToPos(bands.mean+k*bands.sd,"y",true);if(y<T||y>T+H)continue;c.strokeStyle=col;c.beginPath();c.moveTo(L,y);c.lineTo(L+W,y);c.stroke();}
+      c.restore();});
+    // σ 라벨은 그래프 밖 오른쪽 여백에 (최근 구간을 가리지 않게)
+    const small=(el.clientWidth||800)<500;opts.padding=[null,small?34:70,null,null];
+    opts.hooks.draw.push(u=>{const c=u.ctx,L=u.bbox.left,W=u.bbox.width,T=u.bbox.top,H=u.bbox.height,dpr=devicePixelRatio;c.save();
+      c.font=`600 ${10.5*dpr}px Consolas,monospace`;c.textAlign="left";c.textBaseline="middle";
+      for(const k of [2,1,-1,-2]){const v=bands.mean+k*bands.sd,y=u.valToPos(v,"y",true);if(y<T-2*dpr||y>T+H+2*dpr)continue;
+        const t=small?`${k>0?"+":"−"}${Math.abs(k)}σ`:`${k>0?"+":"−"}${Math.abs(k)}σ ${v.toFixed(1)}`;
+        c.fillStyle=Math.abs(k)===1?(dark?"#2dd4bf":"#0d9488"):(dark?"#fb923c":"#ea580c");c.fillText(t,L+W+5*dpr,y);}
+      c.restore();});
+  }
+  // 통계 제외 구간: 사선 무늬 + 테두리
+  if(shade)opts.hooks.drawClear.push(u=>{const a=Math.max(u.valToPos(shade[0],"x",true),u.bbox.left),b=Math.min(u.valToPos(shade[1],"x",true),u.bbox.left+u.bbox.width);
+    if(b<=a)return;const c=u.ctx,d=devicePixelRatio,T=u.bbox.top,H=u.bbox.height;c.save();
+    c.fillStyle=dark?"rgba(255,255,255,.07)":"rgba(0,0,0,.06)";c.fillRect(a,T,b-a,H);
+    c.beginPath();c.rect(a,T,b-a,H);c.clip();c.strokeStyle=dark?"rgba(255,255,255,.10)":"rgba(0,0,0,.08)";c.lineWidth=1*d;
+    for(let x=a-H;x<b;x+=8*d){c.beginPath();c.moveTo(x,T+H);c.lineTo(x+H,T);c.stroke();}
+    c.restore();c.save();c.strokeStyle=dark?"rgba(255,255,255,.35)":"rgba(0,0,0,.3)";c.setLineDash([3*d,3*d]);c.lineWidth=1*d;
+    for(const x of [a,b]){c.beginPath();c.moveTo(x,T);c.lineTo(x,T+H);c.stroke();}
+    c.setLineDash([]);c.font=`600 ${11*d}px sans-serif`;c.textAlign="left";c.fillStyle=dark?"#d4d4d4":"#444";c.fillText("통계 제외",a+5*d,T+15*d);c.restore();});
+  if(zero)opts.hooks.draw.push(u=>{const y=u.valToPos(0,"y",true);if(y<u.bbox.top||y>u.bbox.top+u.bbox.height)return;const c=u.ctx;c.save();c.strokeStyle=css("--fg");c.globalAlpha=.45;c.lineWidth=devicePixelRatio;c.setLineDash([4,4]);c.beginPath();c.moveTo(u.bbox.left,y);c.lineTo(u.bbox.left+u.bbox.width,y);c.stroke();c.restore();});
+  plots[id]=new uPlot(opts,[lines[0].x,...lines.map(l=>l.y)],el);plots[id]._sync=sync;
+  if(init)plots[id].setScale("x",{min:init[0],max:init[1]});
+}
+// 오른쪽으로 드래그 = 선택 구간 확대, 왼쪽으로 드래그 = 축소(현재 화면이 드래그한 폭으로 줄어드는 만큼)
+function dragZoom(u){
+  const sel=u.select;if(sel.width<5)return;
+  // 방향은 선택 상자가 누른 지점의 어느 쪽으로 펼쳐졌는지로 판단 (차트 밖에서 놓으면 cursor.left 가 -10 이 되므로 사용 불가)
+  const dx=u._downX??sel.left,toRight=Math.abs(sel.left-dx)<=Math.abs(sel.left+sel.width-dx);
+  const xs=u.data[0],lo=xs[0],hi=xs[xs.length-1];
+  const a=u.posToVal(sel.left,"x"),b=u.posToVal(sel.left+sel.width,"x");
+  let min,max;
+  if(toRight){min=a;max=b;}
+  else{
+    const cmin=u.scales.x.min,cmax=u.scales.x.max,k=u.over.clientWidth/sel.width,mid=(a+b)/2,half=(cmax-cmin)*k/2;
+    min=mid-half;max=mid+half;
+    if(min<lo){max+=lo-min;min=lo;}if(max>hi){min-=max-hi;max=hi;}min=Math.max(lo,min);
+  }
+  u.setScale("x",{min,max});
+  setTimeout(()=>u.setSelect({left:0,top:0,width:0,height:0},false),0);
+}
+function slice(s,i0,i1){return s.v.slice(i0,i1+1);}
+
+/* ---------- 대시보드 ---------- */
+const DASH_ROWS=[
+  ["정책·단기",["기준금리","콜금리","CD 3M","A1 CP 3M","통안증권 1Y","통안증권 2Y"]],
+  ["국고채",["국고채권 1Y","국고채권 3Y","국고채권 5Y","국고채권 10Y","국고채권 20Y","국고채권 30Y"]],
+  ["크레딧",["산금채 AAA 1Y","은행채 AAA 1Y","공사/공단채 AAA 3Y","회사채AA- 3Y","회사채A- 3Y","회사채BBB- 3Y"]],
+  ["IRS",["IRS 1Y","IRS 3Y","IRS 5Y","IRS 10Y"]],
+  ["해외",["미국 기준금리","일본 기준금리","미국채 2Y","미국채 10Y","미국채 30Y"]],
+];
+const DASH_SPREADS=[["국고 10Y-3Y","국고채권 10Y","국고채권 3Y"],["국고 30Y-10Y","국고채권 30Y","국고채권 10Y"],
+  ["회사채AA- 3Y − 국고 3Y","회사채AA- 3Y","국고채권 3Y"],["IRS 3Y − 국고 3Y","IRS 3Y","국고채권 3Y"],["국고 3Y − 기준금리","국고채권 3Y","기준금리"],
+  ["한·미 기준금리차","기준금리","미국 기준금리"],["국고 10Y − 미국채 10Y","국고채권 10Y","미국채 10Y"],["미국채 10Y − 2Y","미국채 10Y","미국채 2Y"]];
+const PERIODS=["1D","WTD","MTD","QTD","YTD","1Y"];
+function lastIdx(s){for(let i=LAST;i>=0;i--)if(s.v[i]!=null)return i;return -1;}
+function hiLo(fn,i0,i1){let h=-Infinity,l=Infinity;for(let i=i0;i<=i1;i++){const v=fn(i);if(v==null)continue;if(v>h)h=v;if(v<l)l=v;}return [h,l];}
+function dashRow(label,fn,i,isBp){
+  const cur=fn(i);
+  const chg=PERIODS.map(p=>{const j=shiftIdx(i,p);const pv=j>=0?fn(j):null;return cur==null||pv==null?null:(isBp?cur-pv:(cur-pv)*100);});
+  const [h,l]=hiLo(fn,Math.max(0,shiftIdx(i,"1Y")),i);
+  const fv=v=>isBp?fbp(v).replace("+",""):f3(v);
+  return `<td>${label}</td><td><b>${fv(cur)}</b></td>${chg.map(c=>`<td class="${cls(c)}">${fbp(c)}</td>`).join("")}<td>${h>-Infinity?fv(h):"-"}</td><td>${l<Infinity?fv(l):"-"}</td>`;
+}
+const dashRangeGet=rangeBar($("#dashRange"),"dash","3Y",()=>drawDashChart());
+function drawDashChart(){
+  const [i0,i1]=dashRangeGet();const x=TS;
+  const ls=[["국고채권 3Y",PAL[0]],["국고채권 10Y",PAL[1]],["기준금리",PAL[8],true]].filter(([n])=>BYNAME[n])
+    .map(([n,c,step])=>({label:n,color:c,x,y:BYNAME[n].v,step,width:step?2:1.6}));
+  // 국고 10Y − 3Y (bp) 를 오른쪽 보조축으로
+  const K3=BYNAME["국고채권 3Y"],K10=BYNAME["국고채권 10Y"];
+  if(K3&&K10)ls.push({label:"10Y−3Y (bp, 우)",color:PAL[3],width:1.4,y2:true,x,
+    y:K10.v.map((v,i)=>v==null||K3.v[i]==null?null:+((v-K3.v[i])*100).toFixed(2))});
+  tsChart("dashChart",ls,{init:[TS[i0],TS[i1]]});
+}
+renders.dash=()=>{
+  const ref=BYNAME["국고채권 3Y"]||S[0];const i=lastIdx(ref);
+  $("#dashAsOf").textContent=`기준일 ${DATES[i]} · 1년 고/저는 최근 1년 범위`;
+  const cards=["기준금리","국고채권 3Y","국고채권 10Y","회사채AA- 3Y","CD 3M","IRS 3Y"].filter(n=>BYNAME[n]);
+  $("#dashCards").innerHTML=cards.map(n=>{const s=BYNAME[n];const c=valAt(s,i),p=valAt(s,i-1);const d=c!=null&&p!=null?(c-p)*100:null;
+    return `<div class="card"><div class="k">${n}</div><div class="v">${f3(c)}</div><div class="c ${cls(d)}">${d==null?"":(d>0?"▲ ":d<0?"▼ ":"")+fbp(d)+"bp"}</div></div>`;}).join("");
+  let h=`<thead><tr><th>항목</th><th>현재</th>${PERIODS.map(p=>`<th>${p}</th>`).join("")}<th>1년 고</th><th>1년 저</th></tr></thead><tbody>`;
+  for(const [g,names] of DASH_ROWS){let first=true;for(const n of names){const s=BYNAME[n];if(!s)continue;
+    h+=`<tr class="${first?"sep":""}">${dashRow(n,k=>valAt(s,k),i,false)}</tr>`;first=false;}}
+  let first=true;
+  for(const [lab,a,b] of DASH_SPREADS){const A=BYNAME[a],B=BYNAME[b];if(!A||!B)continue;
+    h+=`<tr class="${first?"sep":""}">${dashRow(lab+" (bp)",k=>{const x=valAt(A,k),y=valAt(B,k);return x==null||y==null?null:(x-y)*100;},i,true)}</tr>`;first=false;}
+  $("#dashTbl").innerHTML=h+"</tbody>";
+  drawDashChart();
+};
+
+/* ---------- 시계열 ---------- */
+let SEL=store.get("sel",["국고채권 3Y","국고채권 10Y","회사채AA- 3Y"]).filter(n=>BYNAME[n]);
+const saveSel=()=>store.set("sel",SEL);
+const colorOf=n=>PAL[SEL.indexOf(n)%PAL.length];
+let tsMode="lvl";
+function renderPicker(){
+  const q=$("#pickSearch").value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const match=s=>q.every(t=>s.name.toLowerCase().replace(/\s/g,"").includes(t)||s.name.toLowerCase().includes(t));
+  let h="";
+  for(const g of GROUPS){const ss=BYGROUP[g].filter(match);if(!ss.length)continue;
+    h+=`<div class="grp"><div class="gn" data-g="${g}">${g}<span>${BYGROUP[g][0].sheet} · ${ss.length}</span></div><div class="chips">${
+      ss.map(s=>`<span class="chip ${SEL.includes(s.name)?"on":""}" data-n="${s.name}">${g===s.name?"값":s.tenor}</span>`).join("")}</div></div>`;}
+  $("#picker").innerHTML=h||'<p class="hint">검색 결과가 없습니다.</p>';
+  $("#pickTags").innerHTML=SEL.length?SEL.map(n=>`<span class="tag"><i style="background:${colorOf(n)}"></i>${n}<button data-x="${n}">×</button></span>`).join("")
+    +`<button class="btn" id="selClear" style="font-size:12px;padding:2px 8px">모두 해제</button>`:'<span class="hint">아래에서 만기를 클릭해 추가하세요 (최대 10개)</span>';
+}
+$("#pickSearch").oninput=renderPicker;
+$("#picker").onclick=e=>{const c=e.target.closest(".chip");if(!c)return;const n=c.dataset.n;
+  if(SEL.includes(n))SEL=SEL.filter(x=>x!==n);else{if(SEL.length>=10){alert("최대 10개까지 선택할 수 있습니다.");return;}SEL.push(n);}
+  saveSel();renderPicker();drawTs();};
+$("#pickTags").onclick=e=>{if(e.target.id==="selClear"){SEL=[];}else{const x=e.target.dataset.x;if(!x)return;SEL=SEL.filter(n=>n!==x);}saveSel();renderPicker();drawTs();};
+$("#tsMode").onclick=e=>{const b=e.target.closest("button");if(!b)return;tsMode=b.dataset.m;$$("#tsMode button").forEach(x=>x.classList.toggle("on",x===b));drawTs();};
+const tsRangeGet=rangeBar($("#tsRange"),"ts","1Y",()=>drawTs());
+function firstVal(arr){for(const v of arr)if(v!=null)return v;return null;}
+function drawTs(){
+  const [i0,i1]=tsRangeGet();const x=TS;
+  const ls=SEL.map(n=>{const s=BYNAME[n];let y=s.v;
+    if(tsMode==="chg"){const b=firstVal(slice(s,i0,i1));y=y.map(v=>v==null||b==null?null:+((v-b)*100).toFixed(2));}
+    return {label:n,color:colorOf(n),x,y,step:/기준금리$/.test(s.group)};});
+  tsChart("tsChart",ls,{unit:tsMode==="chg"?"bp":"%",zero:tsMode==="chg",height:420,init:[TS[i0],TS[i1]]});
+  // 통계
+  let h=`<thead><tr><th>시리즈</th><th>시작</th><th>종료</th><th>변동(bp)</th><th>평균</th><th>최고</th><th>최고일</th><th>최저</th><th>최저일</th><th>일변동 표준편차(bp)</th></tr></thead><tbody>`;
+  for(const n of SEL){const s=BYNAME[n];let a=null,b=null,sum=0,c=0,mx=-Infinity,mn=Infinity,mxi=-1,mni=-1,prev=null,ds=[];
+    for(let i=i0;i<=i1;i++){const v=s.v[i];if(v==null)continue;if(a==null)a=v;b=v;sum+=v;c++;if(v>mx){mx=v;mxi=i;}if(v<mn){mn=v;mni=i;}if(prev!=null)ds.push((v-prev)*100);prev=v;}
+    const m=ds.reduce((x,y)=>x+y,0)/(ds.length||1);const sd=ds.length>1?Math.sqrt(ds.reduce((x,y)=>x+(y-m)**2,0)/(ds.length-1)):null;
+    const d=a!=null?(b-a)*100:null;
+    h+=`<tr><td><span class="tag" style="border:0;padding:0"><i style="background:${colorOf(n)}"></i>${n}</span></td><td>${f3(a)}</td><td>${f3(b)}</td><td class="${cls(d)}">${fbp(d)}</td><td>${c?f3(sum/c):"-"}</td><td>${c?f3(mx):"-"}</td><td>${mxi>=0?DATES[mxi]:"-"}</td><td>${c?f3(mn):"-"}</td><td>${mni>=0?DATES[mni]:"-"}</td><td>${sd==null?"-":sd.toFixed(2)}</td></tr>`;}
+  $("#tsStats").innerHTML=h+"</tbody>";
+}
+renders.ts=()=>{renderPicker();drawTs();};
+
+/* ---------- 스프레드 ---------- */
+// 종류(그룹) → 테너 2단계 선택
+const grpOpts=GROUPS.map(g=>`<option>${g}</option>`).join("");
+$("#spAg").innerHTML=grpOpts;$("#spBg").innerHTML=grpOpts;
+function fillTenors(side,prefYears){const g=$(`#sp${side}g`).value,t=$(`#sp${side}t`),ss=BYGROUP[g];
+  t.innerHTML=ss.map(s=>`<option value="${s.name}">${s.name===g?"값":s.tenor}</option>`).join("");
+  const keep=ss.find(s=>s.years!=null&&s.years===prefYears);t.value=(keep||ss[0]).name;}
+function setPick(side,name){const s=BYNAME[name]||S[0];$(`#sp${side}g`).value=s.group;fillTenors(side);$(`#sp${side}t`).value=s.name;}
+const getPick=side=>$(`#sp${side}t`).value;
+for(const side of ["A","B"]){
+  // 종류를 바꾸면 가능한 한 같은 만기를 유지
+  $(`#sp${side}g`).onchange=()=>{const cur=BYNAME[getPick(side)];fillTenors(side,cur&&cur.years);drawSpread();};
+  $(`#sp${side}t`).onchange=()=>drawSpread();
+}
+const spSt=store.get("spread",{a:"국고채권 10Y",b:"국고채권 3Y"});
+setPick("A",BYNAME[spSt.a]?spSt.a:S[0].name);setPick("B",BYNAME[spSt.b]?spSt.b:S[1].name);
+const SP_PRESETS=[["장단기 10-3","국고채권 10Y","국고채권 3Y"],["초장기 30-10","국고채권 30Y","국고채권 10Y"],["크레딧 AA- 3Y","회사채AA- 3Y","국고채권 3Y"],
+  ["스왑 3Y","IRS 3Y","국고채권 3Y"],["스왑 10Y","IRS 10Y","국고채권 10Y"],["CD-기준","CD 3M","기준금리"],["등급 AA- vs BBB-","회사채BBB- 3Y","회사채AA- 3Y"]];
+$("#spPresets").innerHTML=SP_PRESETS.filter(p=>BYNAME[p[1]]&&BYNAME[p[2]]).map((p,k)=>`<button class="btn" data-k="${k}" style="font-size:12px;padding:3px 8px">${p[0]}</button>`).join("");
+$("#spPresets").onclick=e=>{const b=e.target.closest("button");if(!b)return;const p=SP_PRESETS[+b.dataset.k];setPick("A",p[1]);setPick("B",p[2]);drawSpread();};
+$("#spSwap").onclick=()=>{const a=getPick("A");setPick("A",getPick("B"));setPick("B",a);drawSpread();};
+const spRangeGet=rangeBar($("#spRange"),"spread","3Y",()=>drawSpread());
+// 통계 제외 기간 (예: 레고랜드 사태). 평균·표준편차·Z-score·백분위·최고/최저 계산에서 뺌
+// IRS 가 들어간 스프레드(스왑 스프레드)는 별도 설정 spEx.irs (기본 해제)
+let spEx=store.get("spEx",{on:true,a:"2022-05-01",b:"2023-03-21"});if(spEx.irs==null)spEx.irs=false;
+const isIrsPair=(...ss)=>ss.some(s=>s&&s.group==="IRS");
+const exUse=(...ss)=>isIrsPair(...ss)?spEx.irs:spEx.on;
+$("#spExA").value=spEx.a;$("#spExB").value=spEx.b;
+$("#spExOn").onchange=()=>{const A=BYNAME[getPick("A")],B=BYNAME[getPick("B")];if(isIrsPair(A,B))spEx.irs=$("#spExOn").checked;else spEx.on=$("#spExOn").checked;store.set("spEx",spEx);drawSpread();};
+$("#spExA").onchange=$("#spExB").onchange=()=>{spEx.a=$("#spExA").value;spEx.b=$("#spExB").value;store.set("spEx",spEx);drawSpread();};
+function drawSpread(){
+  const A=BYNAME[getPick("A")],B=BYNAME[getPick("B")];store.set("spread",{a:A.name,b:B.name});
+  const [i0,i1]=spRangeGet();const x=TS;
+  const y=A.v.map((a,i)=>{const b=B.v[i];return a==null||b==null?null:+((a-b)*100).toFixed(2);});
+  let exA=spEx.a,exB=spEx.b;if(exA&&exB&&exA>exB)[exA,exB]=[exB,exA];
+  const irs=isIrsPair(A,B);$("#spExOn").checked=exUse(A,B);
+  const exOn=exUse(A,B)&&exA&&exB,isEx=i=>exOn&&DATES[i]>=exA&&DATES[i]<=exB;
+  const all=y.slice(i0,i1+1).filter(v=>v!=null),cur=all[all.length-1];
+  const vals=[];let nEx=0;for(let i=i0;i<=i1;i++){if(y[i]==null)continue;if(isEx(i))nEx++;else vals.push(y[i]);}
+  $("#spExInfo").textContent=(exOn?`통계에 ${vals.length}일 사용 · ${nEx}일 제외`:"")+(irs?`${exOn?" · ":""}IRS 스프레드는 별도 설정 (기본 해제)`:"");
+  const n=vals.length,mean=vals.reduce((a,b)=>a+b,0)/(n||1),sd=Math.sqrt(vals.reduce((a,b)=>a+(b-mean)**2,0)/((n-1)||1));
+  const sorted=[...vals].sort((a,b)=>a-b);const pct=n?sorted.filter(v=>v<=cur).length/n*100:null;
+  const st=[["현재",fbp(cur)+"bp"],["평균",fbp(mean)+"bp"],["최고",fbp(sorted[n-1])+"bp"],["최저",fbp(sorted[0])+"bp"],["표준편차",sd.toFixed(1)+"bp"],
+    ["Z-score",n>1?((cur-mean)/sd).toFixed(2):"-"],["백분위",pct==null?"-":pct.toFixed(0)+"%"],["구간 변동",all.length?fbp(cur-all[0])+"bp":"-"]];
+  $("#spStat").innerHTML=st.map(([k,v])=>`<div><span>${k}</span><b>${v}</b></div>`).join("");
+  tsChart("spChart",[{label:`${A.name} − ${B.name}`,color:PAL[1],x,y},{label:exOn?"구간 평균(제외 반영)":"구간 평균",color:css("--fg"),dash:[6,4],x,y:y.map((v,i)=>i>=i0&&i<=i1?+mean.toFixed(2):null),width:1.2}],
+    {unit:"bp",zero:true,init:[TS[i0],TS[i1]],shade:exOn?[Date.parse(exA+"T00:00:00")/1000,Date.parse(exB+"T00:00:00")/1000]:null,
+     bands:n>1?{mean,sd}:null});
+}
+// 크레딧 종류 × 테너 스프레드(국고 대비) 히트맵. 엑셀 요약_크레딧SP 형식
+const CR_ROWS=[["공사 AAA","공사/공단채 AAA"],["산금채 AAA","산금채 AAA"],["중금채 AAA","중금채 AAA"],["은행채 AAA","은행채 AAA"],["은행채 AA+","은행채 AA+"],
+  ["카드채 AA+","카드채 AA+"],["카드채 AA","카드채 AA"],["카드채 AA-","카드채 AA-"],
+  ["기타금융 AA+","기타금융채AA+"],["기타금융 AA-","기타금융채AA-"],["기타금융 A+","기타금융채A+"],["기타금융 A0","기타금융채A0"],["기타금융 A-","기타금융채A-"],
+  ["회사채 AAA","회사채AAA"],["회사채 AA+","회사채AA+"],["회사채 AA0","회사채AA0"],["회사채 AA-","회사채AA-"],["회사채 A+","회사채A+"],["회사채 A0","회사채A0"],["회사채 A-","회사채A-"]]
+  .filter(([,g])=>BYGROUP[g]);
+const CR_TERM=[["국고 10Y−3Y","국고채권 10Y","국고채권 3Y"],["국고 30Y−10Y","국고채권 30Y","국고채권 10Y"]];
+const CR_PER={"LVL":"현재 수준","WTD":"주간 변동 ΔWTD","MTD":"월간 변동 ΔMTD","QTD":"분기 변동 ΔQTD","YTD":"연간 변동 ΔYTD"};
+let crPer=[...new Set(store.get("crPer",["WTD","MTD"]).map(p=>p==="1W"?"WTD":p))].filter(p=>CR_PER[p]);if(!crPer.length)crPer=["WTD","MTD"];
+$("#crPer").innerHTML=Object.keys(CR_PER).map(p=>`<label><input type="checkbox" value="${p}" ${crPer.includes(p)?"checked":""}>${p==="LVL"?"현재":p}</label>`).join("");
+$("#crPer").onchange=()=>{crPer=$$("#crPer input:checked").map(x=>x.value);store.set("crPer",crPer);drawCredit();};
+$("#crWrap").onclick=e=>{const td=e.target.closest("td[data-a]");if(!td)return;setPick("A",td.dataset.a);setPick("B",td.dataset.b);drawSpread();$("#spChart").scrollIntoView({behavior:"smooth",block:"center"});};
+// + 파랑, − 빨강 (엑셀과 동일)
+const crHeat=(v,mx)=>{if(v==null||!mx)return"";const t=Math.min(1,Math.abs(v)/mx);return `background:rgba(${v>0?"37,99,235":"214,45,45"},${(0.08+t*0.6).toFixed(3)})`;};
+function drawCredit(){
+  const KTB=BYGROUP["국고채권"]||[];const kt=y=>KTB.find(s=>s.years===y);
+  const ys=[...new Set(CR_ROWS.flatMap(([,g])=>BYGROUP[g].filter(s=>s.years!=null&&kt(s.years)).map(s=>s.years)))].sort((a,b)=>a-b);
+  const ref=kt(3)||KTB[0];const i=lastIdx(ref);$("#crAsOf").textContent=`기준일 ${DATES[i]}`;
+  const sp=(a,b,k)=>{const x=valAt(a,k),y=valAt(b,k);return x==null||y==null?null:(x-y)*100;};
+  const val=(a,b,p)=>{const c=sp(a,b,i);if(p==="LVL")return c;const j=shiftIdx(i,p),pv=j>=0?sp(a,b,j):null;return c==null||pv==null?null:c-pv;};
+  let out="";
+  for(const p of crPer){
+    const rows=CR_ROWS.map(([lab,g])=>[lab,ys.map(y=>{const s=BYGROUP[g].find(s=>s.years===y),K=kt(y);return s&&K?{a:s.name,b:K.name,v:val(s,K,p)}:null;})]);
+    const all=rows.flatMap(r=>r[1]).filter(c=>c&&c.v!=null).map(c=>p==="LVL"?c.v:Math.abs(c.v));
+    const mx=all.length?Math.max(...all):0,mn=all.length?Math.min(...all):0,j=p==="LVL"?i:shiftIdx(i,p);
+    const fmt=v=>v==null?"":p==="LVL"?v.toFixed(1):fbp(v);
+    const style=v=>v==null?"":p==="LVL"?`background:rgba(37,99,235,${(0.05+(mx>mn?(v-mn)/(mx-mn):0)*0.5).toFixed(3)})`:crHeat(v,mx);
+    out+=`<div class="tblwrap" style="max-height:none;margin-top:12px"><table class="crt"><thead><tr><th>${CR_PER[p]} (bp)${p==="LVL"?"":`<br><span style="font-weight:400">${DATES[j]} → ${DATES[i]}</span>`}</th>${ys.map(y=>`<th>${tenorLabel(y)}</th>`).join("")}</tr></thead><tbody>`;
+    for(const [lab,cells] of rows)out+=`<tr><td>${lab}</td>${cells.map(c=>c?`<td data-a="${c.a}" data-b="${c.b}" style="cursor:pointer;${style(c.v)}">${fmt(c.v)}</td>`:"<td></td>").join("")}</tr>`;
+    let first=true;
+    for(const [lab,a,b] of CR_TERM){const A=BYNAME[a],B=BYNAME[b];if(!A||!B)continue;const v=val(A,B,p);
+      out+=`<tr class="${first?"sep":""}"><td>${lab}</td><td data-a="${a}" data-b="${b}" style="cursor:pointer" class="${p==="LVL"?"":cls(v)}"><b>${fmt(v)}</b></td>${ys.slice(1).map(()=>"<td></td>").join("")}</tr>`;first=false;}
+    out+="</tbody></table></div>";
+  }
+  $("#crWrap").innerHTML=out||'<p class="hint">위에서 기간을 하나 이상 고르세요.</p>';
+}
+// ---------- 스프레드 › 한눈에 보기 (소형 차트 그리드)
+const GD_GROUPS=GROUPS.filter(g=>!["국고채권","CD","A1 CP","콜금리","IRS"].includes(g)&&!/기준금리$|ACM/.test(g)&&BYGROUP[g].some(s=>s.years!=null));
+const ktbOf=y=>(BYGROUP["국고채권"]||[]).find(s=>s.years===y);
+let spSub=store.get("spSub","detail");
+let gd=store.get("gd",{mode:"group",group:"은행채 AAA",tenor:3,
+  tenors:{},groups:["공사/공단채 AAA","은행채 AAA","카드채 AA","기타금융채AA-","회사채AA-","회사채A+"],v:3});
+// 이전 기본값(카드채 AA+)을 AA0 로 한 번 바꿔 줌
+if(!gd.v||gd.v<2){gd.groups=gd.groups.map(g=>g==="카드채 AA+"?"카드채 AA":g);gd.v=2;}
+// v3: 기본 테너에서 5Y 대신 2.5Y — 저장된 선택에도 반영
+if(gd.v<3){for(const g in gd.tenors)gd.tenors[g]=[...new Set(gd.tenors[g].map(y=>y===5?2.5:y))].sort((a,b)=>a-b);gd.v=3;store.set("gd",gd);}
+$("#gdGroup").innerHTML=GD_GROUPS.map(g=>`<option>${g}</option>`).join("");
+const gdYears=[...new Set(GD_GROUPS.flatMap(g=>BYGROUP[g].filter(s=>s.years!=null&&ktbOf(s.years)).map(s=>s.years)))].sort((a,b)=>a-b);
+$("#gdTenor").innerHTML=gdYears.map(y=>`<option value="${y}">${tenorLabel(y)}</option>`).join("");
+const gdSave=()=>store.set("gd",gd);
+// 종류 모드: 그 종류의 테너 중 기본 6개(6M·1Y·1.5Y·2Y·2.5Y·3Y 우선)
+function gdTenorList(g){return BYGROUP[g].filter(s=>s.years!=null&&ktbOf(s.years));}
+function gdDefaultTenors(g){const av=gdTenorList(g).map(s=>s.years),pref=[0.5,1,1.5,2,2.5,3].filter(y=>av.includes(y));return (pref.length>=6?pref:pref.concat(av.filter(y=>!pref.includes(y)))).slice(0,6);}
+function gdItems(){
+  if(gd.mode==="group"){const sel=gd.tenors[gd.group]||gdDefaultTenors(gd.group);
+    return gdTenorList(gd.group).map(s=>({key:String(s.years),label:tenorLabel(s.years),a:s,b:ktbOf(s.years),on:sel.includes(s.years)}));}
+  return GD_GROUPS.map(g=>BYGROUP[g].find(s=>s.years===gd.tenor)).filter(Boolean)
+    .map(s=>({key:s.group,label:s.group,a:s,b:ktbOf(gd.tenor),on:gd.groups.includes(s.group)}));
+}
+$("#spSub").onclick=e=>{const b=e.target.closest("button");if(!b)return;spSub=b.dataset.v;store.set("spSub",spSub);renders.spread();};
+$("#gdMode").onclick=e=>{const b=e.target.closest("button");if(!b)return;gd.mode=b.dataset.m;gdSave();drawGrid();};
+$("#gdGroup").onchange=()=>{gd.group=$("#gdGroup").value;gdSave();drawGrid();};
+$("#gdTenor").onchange=()=>{gd.tenor=+$("#gdTenor").value;gdSave();drawGrid();};
+$("#gdChips").onclick=e=>{const c=e.target.closest(".chip");if(!c)return;const k=c.dataset.k;
+  if(gd.mode==="group"){const y=+k;let sel=gd.tenors[gd.group]||gdDefaultTenors(gd.group);sel=sel.includes(y)?sel.filter(x=>x!==y):sel.concat(y).sort((a,b)=>a-b);gd.tenors[gd.group]=sel;}
+  else gd.groups=gd.groups.includes(k)?gd.groups.filter(x=>x!==k):gd.groups.concat(k);
+  gdSave();drawGrid();};
+$("#gdCards").onclick=e=>{const b=e.target.closest("button[data-a]");if(!b)return;setPick("A",b.dataset.a);setPick("B",b.dataset.b);spSub="detail";store.set("spSub",spSub);renders.spread();window.scrollTo({top:0,behavior:"smooth"});};
+// 기간 바 = 통계(평균·σ) 기간, 기본 전체. 차트는 그 끝에서 최근 5개월만 먼저 보여 줌
+const gdRangeGet=rangeBar($("#gdRange"),"gdStat","전체",()=>drawGrid());
+let gdCount=0;
+function drawGrid(){
+  $$("#gdMode button").forEach(b=>b.classList.toggle("on",b.dataset.m===gd.mode));
+  $("#gdGroup").style.display=gd.mode==="group"?"":"none";$("#gdTenor").style.display=gd.mode==="tenor"?"":"none";
+  $("#gdGroup").value=gd.group;$("#gdTenor").value=String(gd.tenor);
+  const items=gdItems();
+  $("#gdChips").innerHTML=items.map(it=>`<span class="chip ${it.on?"on":""}" data-k="${it.key}">${it.label}</span>`).join("");
+  const [i0,i1]=gdRangeGet();
+  let exA=spEx.a,exB=spEx.b;if(exA&&exB&&exA>exB)[exA,exB]=[exB,exA];
+  const on=items.filter(it=>it.on);
+  for(let k=on.length;k<gdCount;k++)if(plots["gd"+k]){plots["gd"+k].destroy();delete plots["gd"+k];}
+  gdCount=on.length;
+  $("#gdCards").innerHTML=on.length?on.map((it,k)=>`<div class="smcard"><div class="hd"><span class="tt">${it.a.name} − 국고 ${tenorLabel(it.a.years)}</span>
+    <button class="btn" data-a="${it.a.name}" data-b="${it.b.name}" style="padding:1px 8px;font-size:11px">상세 ↗</button></div><div class="mt" id="gdm${k}"></div><div class="hv" id="gdh${k}">&nbsp;</div><div id="gd${k}"></div></div>`).join("")
+    :'<p class="hint">위에서 표시할 항목을 고르세요.</p>';
+  on.forEach((it,k)=>{
+    const exOn=exUse(it.a,it.b)&&exA&&exB;
+    const y=it.a.v.map((a,i)=>{const b=it.b.v[i];return a==null||b==null?null:+((a-b)*100).toFixed(2);});
+    const vals=[];for(let i=i0;i<=i1;i++)if(y[i]!=null&&!(exOn&&DATES[i]>=exA&&DATES[i]<=exB))vals.push(y[i]);
+    const n=vals.length,mean=vals.reduce((a,b)=>a+b,0)/(n||1),sd=Math.sqrt(vals.reduce((a,b)=>a+(b-mean)**2,0)/((n-1)||1));
+    let ci=-1;for(let i=i1;i>=i0;i--)if(y[i]!=null){ci=i;break;}
+    const cur=ci>=0?y[ci]:null,chg=p=>{if(cur==null)return null;const j=shiftIdx(ci,p),v=j>=0?valAt({v:y},j):null;return v==null?null:cur-v;},w=chg("WTD"),m=chg("MTD");
+    $("#gdm"+k).innerHTML=`<b>${cur==null?"-":cur.toFixed(1)}bp</b> · WTD <span class="${cls(w)}">${fbp(w)}</span> · MTD <span class="${cls(m)}">${fbp(m)}</span>`;
+    // 마우스 위치(연동된 다른 차트 포함)의 날짜·스프레드 표시
+    const hv=$("#gdh"+k),hoverAt=(u,i)=>{if(i==null||i<0){hv.innerHTML="&nbsp;";return;}
+      let j=i;while(j>0&&y[j]==null&&i-j<10)j--;const v=y[j];
+      hv.innerHTML=v==null?`${DATES[i]} · -`:`<span class="d">${DATES[j]}</span> <b>${v.toFixed(1)}bp</b>${cur!=null?` <span class="${cls(cur-v)}">→ 현재 ${fbp(cur-v)}</span>`:""}`;};
+    tsChart("gd"+k,[{label:it.label,color:PAL[1],x:TS,y}],{unit:"bp",height:200,onCursor:hoverAt,init:[TS[Math.max(i0,shiftIdx(i1,"5M"))],TS[i1]],sync:"gd",
+      shade:exOn?[Date.parse(exA+"T00:00:00")/1000,Date.parse(exB+"T00:00:00")/1000]:null,bands:n>1?{mean,sd}:null});
+  });
+}
+// ---------- 스프레드 › 본드스왑 (IRS − 국고, 단기는 IRS − 통안)
+const IRS_BY=y=>(BYGROUP["IRS"]||[]).find(s=>s.years===y);
+const bsSeries=(irs,bond)=>irs.v.map((a,i)=>{const b=bond.v[i];return a==null||b==null?null:+((a-b)*100).toFixed(2);});
+const bsLast=arr=>{for(let i=arr.length-1;i>=0;i--)if(arr[i]!=null)return [arr[i],i];return [null,-1];};
+const bsPct=(arr,v)=>{const t0=idxOnOrAfter("2013-01-01");let n=0,le=0;for(let i=t0;i<arr.length;i++){const x=arr[i];if(x==null)continue;n++;if(x<=v)le++;}return n?le/n*100:0;};
+const BS_ALL=[];
+for(const [g,lab] of [["국고채권","국고"],["통안증권","통안"]])
+  for(const s of (BYGROUP[g]||[])){const I=IRS_BY(s.years);if(I&&s.years>=0.5)BS_ALL.push({key:`${lab} ${s.tenor}`,grp:lab,years:s.years,tenor:s.tenor,irs:I,bond:s,y:bsSeries(I,s)});}
+const BS_MAIN=["국고 1Y","국고 2Y","국고 3Y","국고 5Y","국고 7Y","국고 10Y","국고 30Y"],BS_SHORT=["통안 6M","통안 1Y","통안 2Y"];
+let bs=store.get("bs",{cmp:["1M","1Y"],sel:["국고 1Y","국고 2Y","국고 3Y","국고 5Y","국고 10Y","국고 30Y"],msb:true});
+$("#bsCmp").innerHTML=["WTD","1M","3M","1Y"].map(p=>`<label><input type="checkbox" value="${p}" ${bs.cmp.includes(p)?"checked":""}>${pLab(p)}</label>`).join("");
+$("#bsCmp").onchange=()=>{bs.cmp=$$("#bsCmp input:checked").map(x=>x.value);store.set("bs",bs);drawBsCurve();};
+$("#bsMsb").checked=bs.msb!==false;$("#bsMsb").onchange=()=>{bs.msb=$("#bsMsb").checked;store.set("bs",bs);drawBsCurve();};
+$("#bsChips").onclick=e=>{const c=e.target.closest(".chip");if(!c)return;const k=c.dataset.k;bs.sel=bs.sel.includes(k)?bs.sel.filter(x=>x!==k):bs.sel.concat(k);store.set("bs",bs);drawBsGrid();};
+$("#bsCards").onclick=e=>{const b=e.target.closest("button[data-a]");if(!b)return;setPick("A",b.dataset.a);setPick("B",b.dataset.b);spSub="detail";store.set("spSub",spSub);renders.spread();window.scrollTo({top:0,behavior:"smooth"});};
+const bsRangeGet=rangeBar($("#bsRange"),"bsStat","전체",()=>drawBsGrid());
+const bsGet=k=>BS_ALL.find(p=>p.key===k);
+function drawBsTable(){
+  const ref=bsGet("국고 3Y");const i=ref?bsLast(ref.y)[1]:LAST;$("#bsAsOf").textContent=`기준일 ${DATES[i]}`;
+  const P=["WTD","MTD","QTD","YTD"];
+  let h=`<thead><tr><th>구분</th><th>현재</th>${P.map(p=>`<th>${p}</th>`).join("")}<th>1년 고</th><th>1년 저</th><th>백분위</th></tr></thead><tbody>`;
+  const sec=(title,keys)=>{let first=true;for(const k of keys){const p=bsGet(k);if(!p)continue;const [cur,ci]=bsLast(p.y);if(cur==null)continue;
+    const ch=P.map(q=>{const j=shiftIdx(ci,q),v=j>=0?valAt({v:p.y},j):null;return v==null?null:cur-v;});
+    let hi=-1e9,lo=1e9;for(let t=Math.max(0,shiftIdx(ci,"1Y"));t<=ci;t++){const v=p.y[t];if(v==null)continue;if(v>hi)hi=v;if(v<lo)lo=v;}
+    h+=`<tr class="${first?"sep":""}"><td>${first?`<span class="hint">${title}</span><br>`:""}IRS ${p.irs.tenor} − ${p.grp} ${p.tenor}</td><td><b>${cur.toFixed(1)}</b></td>${ch.map(v=>`<td class="${cls(v)}">${fbp(v)}</td>`).join("")}<td>${hi.toFixed(1)}</td><td>${lo.toFixed(1)}</td><td>${bsPct(p.y,cur).toFixed(0)}%</td></tr>`;first=false;}};
+  sec("본드스왑 (IRS − 국고)",BS_MAIN);sec("단기 스왑 (IRS − 통안)",BS_SHORT);
+  $("#bsTbl").innerHTML=h+"</tbody>";
+}
+function drawBsCurve(){
+  const id="bsCurve",el=$("#"+id);if(plots[id]){plots[id].destroy();delete plots[id];}el.innerHTML="";if(!window.uPlot)return;
+  const K=BS_ALL.filter(p=>p.grp==="국고"),M=BS_ALL.filter(p=>p.grp==="통안");
+  const ref=bsGet("국고 3Y");const bi=bsLast(ref.y)[1];
+  const days=[[bi,DATES[bi].slice(2)]];for(const p of bs.cmp){let j=shiftIdx(bi,p);while(j>0&&ref.y[j]==null)j--;if(j>=0&&!days.some(d=>d[0]===j))days.push([j,pLab(p)]);}
+  const xs=[...new Set(BS_ALL.filter(p=>p.grp==="국고"||bs.msb!==false).map(p=>p.years))].sort((a,b)=>a-b);
+  const at=(arr,y,i)=>{const p=arr.find(q=>q.years===y);return p?valAt({v:p.y},i):null;};
+  const lines=days.map(([di,tag],k)=>({label:`국고 ${tag}`,tag,color:PAL[[0,1,2,5][k%4]],dash:k?[6,4]:[],w:k?1.5:2.4,y:xs.map(y=>at(K,y,di))}));
+  if(bs.msb!==false)lines.push({label:`통안 ${DATES[bi].slice(2)}`,tag:"통안",color:PAL[3],dash:[2,3],w:2,y:xs.map(y=>at(M,y,bi))});
+  plots[id]=new uPlot({width:el.clientWidth||700,height:320,padding:[12,64,null,null],scales:{x:{time:false,distr:3,log:10}},
+    series:[{label:"만기",value:(u,v)=>v==null?"-":tenorLabel(v)},...lines.map(l=>({label:l.label,stroke:l.color,dash:l.dash,width:l.w,spanGaps:true,points:{show:true,size:5,fill:l.color},value:(u,v)=>v==null?"-":v.toFixed(1)+"bp"}))],
+    axes:[axis({splits:()=>xs,filter:(u,sp)=>sp,values:(u,vs)=>{let last=-1e9;return vs.map(v=>{const x=u.valToPos(v,"x");if(x-last<26)return"";last=x;return tenorLabel(v);});}}),axis({size:58,values:(u,vs)=>vs.map(v=>v.toFixed(0)+"bp")})],
+    cursor:{drag:{x:false,y:false}},
+    hooks:{draw:[u=>{const c=u.ctx,d=devicePixelRatio;c.save();
+      const y0=u.valToPos(0,"y",true);if(y0>u.bbox.top&&y0<u.bbox.top+u.bbox.height){c.strokeStyle=css("--fg");c.globalAlpha=.4;c.setLineDash([4*d,4*d]);c.beginPath();c.moveTo(u.bbox.left,y0);c.lineTo(u.bbox.left+u.bbox.width,y0);c.stroke();c.globalAlpha=1;c.setLineDash([]);}
+      c.font=`700 ${11*d}px Consolas,"Malgun Gothic",monospace`;c.textBaseline="middle";c.textAlign="left";
+      // 끝 라벨: 겹치면 위아래로 벌림
+      const tags=lines.map(l=>{let k=l.y.length-1;while(k>=0&&l.y[k]==null)k--;return k<0?null:{l,x:u.valToPos(xs[k],"x",true),y:u.valToPos(l.y[k],"y",true)};}).filter(Boolean).sort((a,b)=>a.y-b.y);
+      for(let i=1;i<tags.length;i++)if(Math.abs(tags[i].x-tags[i-1].x)<40*d&&tags[i].y-tags[i-1].y<13*d)tags[i].y=tags[i-1].y+13*d;
+      for(const t of tags){const w=c.measureText(t.l.tag).width;c.globalAlpha=.85;c.fillStyle=css("--panel");c.fillRect(t.x+5*d,t.y-7*d,w+6*d,14*d);c.globalAlpha=1;c.fillStyle=t.l.color;c.fillText(t.l.tag,t.x+8*d,t.y);}
+      c.restore();}]}},[xs,...lines.map(l=>l.y)],el);
+}
+let bsCount=0;
+function drawBsGrid(){
+  $("#bsChips").innerHTML=[...BS_MAIN,...BS_SHORT].filter(k=>bsGet(k)).map(k=>`<span class="chip ${bs.sel.includes(k)?"on":""}" data-k="${k}">${k}</span>`).join("");
+  const [i0,i1]=bsRangeGet(),on=[...BS_MAIN,...BS_SHORT].filter(k=>bs.sel.includes(k)&&bsGet(k)).map(bsGet);
+  for(let k=on.length;k<bsCount;k++)if(plots["bs"+k]){plots["bs"+k].destroy();delete plots["bs"+k];}bsCount=on.length;
+  $("#bsCards").innerHTML=on.map((p,k)=>`<div class="smcard"><div class="hd"><span class="tt">IRS ${p.irs.tenor} − ${p.grp} ${p.tenor}</span>
+    <button class="btn" data-a="${p.irs.name}" data-b="${p.bond.name}" style="padding:1px 8px;font-size:11px">상세 ↗</button></div><div class="mt" id="bsm${k}"></div><div class="hv" id="bsh${k}">&nbsp;</div><div id="bs${k}"></div></div>`).join("")||'<p class="hint">위에서 만기를 고르세요.</p>';
+  on.forEach((p,k)=>{const y=p.y,vals=[];for(let i=i0;i<=i1;i++)if(y[i]!=null)vals.push(y[i]);
+    const n=vals.length,mean=vals.reduce((a,b)=>a+b,0)/(n||1),sd=Math.sqrt(vals.reduce((a,b)=>a+(b-mean)**2,0)/((n-1)||1));
+    let ci=-1;for(let i=i1;i>=i0;i--)if(y[i]!=null){ci=i;break;}
+    const cur=ci>=0?y[ci]:null,chg=q=>{if(cur==null)return null;const j=shiftIdx(ci,q),v=j>=0?valAt({v:y},j):null;return v==null?null:cur-v;},w=chg("WTD"),m=chg("MTD");
+    $("#bsm"+k).innerHTML=`<b>${cur==null?"-":cur.toFixed(1)}bp</b> · WTD <span class="${cls(w)}">${fbp(w)}</span> · MTD <span class="${cls(m)}">${fbp(m)}</span>`;
+    const hv=$("#bsh"+k),hoverAt=(u,i)=>{if(i==null||i<0){hv.innerHTML="&nbsp;";return;}let j=i;while(j>0&&y[j]==null&&i-j<10)j--;const v=y[j];
+      hv.innerHTML=v==null?`${DATES[i]} · -`:`<span class="d">${DATES[j]}</span> <b>${v.toFixed(1)}bp</b>${cur!=null?` <span class="${cls(cur-v)}">→ 현재 ${fbp(cur-v)}</span>`:""}`;};
+    tsChart("bs"+k,[{label:p.key,color:PAL[1],x:TS,y}],{unit:"bp",height:200,zero:true,onCursor:hoverAt,init:[TS[Math.max(i0,shiftIdx(i1,"5M"))],TS[i1]],sync:"bs",bands:n>1?{mean,sd}:null});});
+}
+renders.spread=()=>{
+  if(!["detail","grid","bs"].includes(spSub))spSub="detail";
+  $$("#spSub button").forEach(b=>b.classList.toggle("on",b.dataset.v===spSub));
+  $("#spDetail").style.display=spSub==="detail"?"":"none";$("#spGrid").style.display=spSub==="grid"?"":"none";$("#spBs").style.display=spSub==="bs"?"":"none";
+  if(spSub==="grid")drawGrid();else if(spSub==="bs"){drawBsTable();drawBsCurve();drawBsGrid();}else{drawSpread();drawCredit();}
+};
+
+
+/* ---------- 커브 ---------- */
+const CURVE_GROUPS=GROUPS.filter(g=>BYGROUP[g].filter(s=>s.years!=null).length>1);
+const TENORED=g=>BYGROUP[g].filter(s=>s.years!=null);
+let cvSel=store.get("cvGroups",["국고채권"]).filter(g=>CURVE_GROUPS.includes(g));if(!cvSel.length)cvSel=[CURVE_GROUPS[0]];
+// 분류별 칩: 선택한 칩은 차트 선 색으로 칠함
+const CV_CATS=[["국채",/^(국고채권|통안증권)$/],["공사·특수",/^공사\/공단채/],["은행",/^(산금채|중금채|은행채)/],["카드",/^카드채/],
+  ["캐피탈",/^기타금융채/],["회사채",/^회사채/],["단기",/^(CD|A1 CP)$/],["해외·스왑",/^(미국채|IRS)$/],["ACM 모형",/ACM/]];
+const cvChipLab=g=>({"국고채권":"국고채","통안증권":"통안채","미국채":"미국채"}[g]||g.replace(/^(공사\/공단채|카드채|기타금융채|회사채)\s*/,"")
+  .replace(/^(산금채|중금채|은행채)\s*/,(m,a)=>a.replace("채","")+" ").replace(/^국고 ACM /,"국고 ").replace(/^미국 ACM동일조건 /,"미국(동일) ").replace(/^ACM /,"미국 "));
+const cvFull=g=>g.replace("국고채권","국고채").replace("통안증권","통안채").replace("기타금융채","캐피탈").replace("공사/공단채","공사").replace(/([가-힣])(A|B)/,"$1 $2");
+const cvColor=g=>cvSel.length>1?PAL[cvSel.indexOf(g)%PAL.length]:PAL[0];
+function renderCvPick(){
+  const used=new Set();let h="";
+  for(const [lab,re] of CV_CATS){const gs=CURVE_GROUPS.filter(g=>!used.has(g)&&re.test(g));if(!gs.length)continue;gs.forEach(g=>used.add(g));
+    h+=`<div class="cl">${lab}</div><div class="chips">${gs.map(g=>{const on=cvSel.includes(g),c=on?cvColor(g):"";
+      return `<button class="chip${on?" on":""}" data-g="${g}" title="${g}"${on?` style="background:${c};border-color:${c}"`:""}>${cvChipLab(g)}</button>`;}).join("")}</div>`;}
+  const rest=CURVE_GROUPS.filter(g=>!used.has(g));
+  if(rest.length)h+=`<div class="cl">기타</div><div class="chips">${rest.map(g=>`<button class="chip${cvSel.includes(g)?" on":""}" data-g="${g}">${g}</button>`).join("")}</div>`;
+  $("#cvGroups").innerHTML=h;
+  $("#cvSelInfo").innerHTML=`${cvSel.length}개 선택 · ${cvSel.map(g=>`<span style="color:${cvColor(g)};font-weight:700">●</span> ${cvFull(g)}`).join("  ")} <button class="btn" id="cvClear" style="padding:1px 8px;font-size:11px;margin-left:6px">국고채만</button>`;
+}
+$("#cvGroups").onclick=e=>{const b=e.target.closest("button[data-g]");if(!b)return;const g=b.dataset.g;
+  cvSel=cvSel.includes(g)?cvSel.filter(x=>x!==g):cvSel.concat(g);if(!cvSel.length)cvSel=[g];store.set("cvGroups",cvSel);renderCvPick();drawCurve();};
+$("#cvSelInfo").onclick=e=>{if(e.target.id!=="cvClear")return;cvSel=["국고채권"];store.set("cvGroups",cvSel);renderCvPick();drawCurve();};
+renderCvPick();
+const CMP=["WTD","1M","3M","6M","1Y","3Y"];let cvCmp=store.get("cvCmp",["1M","1Y"]).map(p=>p==="1W"?"WTD":p);
+$("#cvCmp").innerHTML=CMP.map(p=>`<label><input type="checkbox" value="${p}" ${cvCmp.includes(p)?"checked":""}>${pLab(p)}</label>`).join("");
+$("#cvCmp").onchange=()=>{cvCmp=$$("#cvCmp input:checked").map(x=>x.value);store.set("cvCmp",cvCmp);drawCurve();};
+for(const id of ["#cvDate","#cvCustom","#mxDate"]){$(id).min=DATES[0];$(id).max=DATES[LAST];}
+const BOND_LAST=DATES[lastIdx(BYNAME["국고채권 3Y"]||S[0])];
+$("#cvDate").value=BOND_LAST;
+$("#cvDate").onchange=$("#cvCustom").onchange=$("#cvLog").onchange=()=>drawCurve();
+const DASHES=[[],[6,4],[2,3],[10,4,2,4],[1,2],[8,8],[3,6]];
+function tenorLabel(y){return y<0.01?"O/N":y<1?Math.round(y*12)+"M":(Number.isInteger(y)?y:y.toFixed(1))+"Y";}
+function drawCurve(){
+  const id="cvChart",el=$("#"+id);
+  const bi=idxOnOrBefore($("#cvDate").value||DATES[LAST]);if(bi<0)return;
+  const dIdx=[bi,...cvCmp.map(p=>shiftIdx(bi,p))];
+  if($("#cvCustom").value){const c=idxOnOrBefore($("#cvCustom").value);if(c>=0)dIdx.push(c);}
+  const dates=[...new Set(dIdx.filter(i=>i>=0))];
+  // 선 끝 라벨: 기준일은 날짜, 비교는 "1M전" 처럼, 직접 지정은 날짜
+  const tagOf={};tagOf[bi]=DATES[bi].slice(2);cvCmp.forEach(p=>{const j=shiftIdx(bi,p);if(j>=0&&tagOf[j]==null)tagOf[j]=pLab(p);});
+  const ys=[...new Set(cvSel.flatMap(g=>TENORED(g).map(s=>s.years)))].sort((a,b)=>a-b);
+  const lines=[];
+  cvSel.forEach((g,gi)=>dates.forEach((di,dk)=>{
+    const color=cvSel.length===1?PAL[dk%PAL.length]:PAL[gi%PAL.length];
+    const m=new Map(TENORED(g).map(s=>[s.years,valAt(s,di)]));
+    lines.push({label:`${g} ${DATES[di]}`,tag:(cvSel.length>1?rdShort(g)+" ":"")+(tagOf[di]??DATES[di].slice(2)),g,di,color,dash:cvSel.length===1?[]:DASHES[dk%DASHES.length],y:ys.map(y=>m.has(y)?m.get(y):null)});
+  }));
+  if(plots[id]){plots[id].destroy();delete plots[id];}el.innerHTML="";
+  if(!lines.length||!window.uPlot){el.innerHTML='<p class="hint" style="padding:40px;text-align:center">커브를 선택하세요.</p>';$("#cvTbl").innerHTML="";return;}
+  const log=$("#cvLog").checked;
+  const tagW=cvSel.length>1?120:70;
+  plots[id]=new uPlot({width:el.clientWidth||800,height:420,padding:[12,tagW,null,null],
+    scales:{x:{time:false,distr:log?3:1,log:10}},
+    hooks:{draw:[u=>{const c=u.ctx,d=devicePixelRatio,R=u.bbox.left+u.bbox.width;c.save();c.font=`700 ${12*d}px Consolas,"Malgun Gothic",monospace`;c.textBaseline="middle";c.textAlign="left";
+      // 각 선의 마지막 점 옆에 라벨, 겹치면 위아래로 밀어냄
+      const tags=lines.map(l=>{let k=l.y.length-1;while(k>=0&&l.y[k]==null)k--;return k<0?null:{l,x:u.valToPos(ys[k],"x",true),y:u.valToPos(l.y[k],"y",true)};}).filter(Boolean).sort((a,b)=>a.y-b.y);
+      const gap=13*d;for(let i=1;i<tags.length;i++)if(tags[i].y-tags[i-1].y<gap)tags[i].y=tags[i-1].y+gap;
+      for(const t of tags){const w=c.measureText(t.l.tag).width;c.globalAlpha=.8;c.fillStyle=css("--panel");c.fillRect(t.x+5*d,t.y-7*d,w+6*d,14*d);c.globalAlpha=1;c.fillStyle=t.l.color;c.fillText(t.l.tag,t.x+8*d,t.y);}
+      c.restore();}]},
+    series:[{label:"만기",value:(u,v)=>v==null?"-":tenorLabel(v)},...lines.map(l=>({label:l.label,stroke:l.color,dash:l.dash,width:l.di===bi?2.4:1.6,spanGaps:true,
+      points:{show:true,size:5,fill:l.color},value:(u,v)=>v==null?"-":v.toFixed(3)}))],
+    // 로그축 기본 filter 는 1·10 같은 눈금만 남기고 나머지를 null 로 만들므로 모든 만기 눈금을 그대로 둠
+    axes:[axis({splits:()=>ys,filter:(u,sp)=>sp,space:24,
+      // 라벨끼리 28px 보다 가까우면 건너뜀 (좁은 화면에서 겹침 방지)
+      values:(u,vs)=>{let last=-1e9;return vs.map(v=>{if(v==null)return"";const x=u.valToPos(v,"x");if(x-last<28)return"";last=x;return tenorLabel(v);});}}),axis({size:58,values:(u,vs)=>vs.map(v=>v.toFixed(2))})],
+    cursor:{drag:{x:false,y:false}}},[ys,...lines.map(l=>l.y)],el);
+  // 표: 만기 × 라인, 기준일 대비 변동
+  let h=`<thead><tr><th>만기</th>${lines.map(l=>`<th><span style="color:${l.color}">●</span> ${l.label}</th>`).join("")}`;
+  const base=lines.filter(l=>l.di===bi);const cmpL=lines.filter(l=>l.di!==bi);
+  h+=cmpL.map(l=>`<th>Δ ${l.g} vs ${DATES[l.di]}(bp)</th>`).join("")+`</tr></thead><tbody>`;
+  ys.forEach((y,k)=>{h+=`<tr><td>${tenorLabel(y)}</td>${lines.map(l=>`<td>${f3(l.y[k])}</td>`).join("")}`;
+    h+=cmpL.map(l=>{const b=base.find(x=>x.g===l.g);const d=b&&b.y[k]!=null&&l.y[k]!=null?(b.y[k]-l.y[k])*100:null;return `<td class="${cls(d)}">${fbp(d)}</td>`;}).join("")+"</tr>";});
+  $("#cvTbl").innerHTML=h+"</tbody>";
+}
+renders.curve=drawCurve;
+
+/* ---------- 매트릭스 ---------- */
+let mxMode="sprchg";
+$$("#mxMode button").forEach(b=>b.classList.toggle("on",b.dataset.m===mxMode));
+$("#mxPeriod").innerHTML=PERIODS.concat(["3Y"]).map(p=>`<option ${p==="MTD"?"selected":""}>${p}</option>`).join("");
+$("#mxDate").value=BOND_LAST;
+$("#mxMode").onclick=e=>{const b=e.target.closest("button");if(!b)return;mxMode=b.dataset.m;$$("#mxMode button").forEach(x=>x.classList.toggle("on",x===b));drawMatrix();};
+$("#mxDate").onchange=$("#mxPeriod").onchange=()=>drawMatrix();
+function heat(v,max,div){
+  if(v==null||!max)return"";const t=Math.min(1,Math.abs(v)/max);
+  const c=div?(v>0?"214,45,45":"31,95,214"):"37,99,235";return `background:rgba(${c},${(t*0.55).toFixed(3)})`;
+}
+function drawMatrix(){
+  const bi=idxOnOrBefore($("#mxDate").value||DATES[LAST]);const pj=shiftIdx(bi,$("#mxPeriod").value);
+  $("#mxPeriodWrap").style.display=mxMode==="chg"||mxMode==="sprchg"?"":"none";
+  const KTB=BYGROUP["국고채권"]||[];const ktb=(y,i)=>{const s=KTB.find(s=>s.years===y);return s?valAt(s,i):null;};
+  const groups=CURVE_GROUPS.filter(g=>!/ACM|^미국채/.test(g)&&!(mxMode.startsWith("spr")&&["국고채권","통안증권","CD","A1 CP"].includes(g)));
+  const ys=[...new Set(groups.flatMap(g=>TENORED(g).map(s=>s.years)))].sort((a,b)=>a-b);
+  const cell=(s,i)=>{const v=valAt(s,i);if(v==null)return null;
+    if(mxMode==="lvl")return v;
+    if(mxMode==="spr"){const k=ktb(s.years,i);return k==null?null:(v-k)*100;}
+    const p=valAt(s,pj);if(p==null)return null;
+    if(mxMode==="chg")return (v-p)*100;
+    const k=ktb(s.years,i),kp=ktb(s.years,pj);return k==null||kp==null?null:((v-k)-(p-kp))*100;};
+  const rows=groups.map(g=>{const m=new Map(TENORED(g).map(s=>[s.years,cell(s,bi)]));return [g,ys.map(y=>m.has(y)?m.get(y):null)];});
+  const all=rows.flatMap(r=>r[1]).filter(v=>v!=null);
+  const div=mxMode==="chg"||mxMode==="sprchg";
+  const mx=div?Math.max(...all.map(Math.abs)):Math.max(...all),mn=div?0:Math.min(...all);
+  const fmt=v=>v==null?"":mxMode==="lvl"?v.toFixed(3):div?fbp(v):v.toFixed(1);
+  let h=`<thead><tr><th>${DATES[bi]}${div?" vs "+DATES[pj]:""}</th>${ys.map(y=>`<th>${tenorLabel(y)}</th>`).join("")}</tr></thead><tbody>`;
+  for(const [g,vs] of rows)h+=`<tr><td>${g}</td>${vs.map(v=>`<td class="heat" style="${div?heat(v,mx,true):heat(v==null?null:v-mn,mx-mn,false)}">${fmt(v)}</td>`).join("")}</tr>`;
+  $("#mxTbl").innerHTML=h+"</tbody>";
+}
+renders.matrix=drawMatrix;
+
+/* ---------- 데이터 표 ---------- */
+const tbRangeGet=rangeBar($("#tbRange"),"tb","3M",()=>drawTable());
+function drawTable(){
+  const [i0,i1]=tbRangeGet();
+  $("#tbInfo").textContent=`${i1-i0+1}행 × ${SEL.length}열`;
+  if(!SEL.length){$("#tbTbl").innerHTML='<tr><td class="hint">시계열 탭에서 시리즈를 선택하세요.</td></tr>';return;}
+  const ss=SEL.map(n=>BYNAME[n]);
+  const parts=[`<thead><tr><th>일자</th>${SEL.map(n=>`<th>${n}</th>`).join("")}</tr></thead><tbody>`];
+  for(let i=i1;i>=i0;i--){if(ss.every(s=>s.v[i]==null))continue;parts.push(`<tr><td>${DATES[i]}</td>${ss.map(s=>`<td>${f3(s.v[i])}</td>`).join("")}</tr>`);}
+  $("#tbTbl").innerHTML=parts.join("")+"</tbody>";
+}
+$("#tbCsv").onclick=()=>{
+  const [i0,i1]=tbRangeGet();const ss=SEL.map(n=>BYNAME[n]);if(!ss.length)return;
+  const q=t=>`"${String(t).replace(/"/g,'""')}"`;
+  const lines=[["일자",...SEL].map(q).join(",")];
+  for(let i=i1;i>=i0;i--){if(ss.every(s=>s.v[i]==null))continue;lines.push([DATES[i],...ss.map(s=>s.v[i]==null?"":s.v[i])].join(","));}
+  const blob=new Blob(["﻿"+lines.join("\r\n")],{type:"text/csv;charset=utf-8"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`YieldBox_${DATES[i0]}_${DATES[i1]}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+};
+renders.table=drawTable;
+
+/* ---------- 선도금리 ----------
+   엑셀 '인포맥스 금리.xlsm' 의 두 방식을 그대로 옮김
+   - SIMPLE : 선도금리 시트. ((1+R2)^T2/(1+R1)^T1)^(1/Tf)-1, T=YEARFRAC(기준일,EDATE(기준일,m),3)
+   - FF/LZ  : 선도금리_new 시트의 VBA(IRSCurve). CD 3M + IRS 호가로 할인계수 부트스트래핑,
+              고정레그 분기 ACT/365, 선도 = 단리 ACT/365 */
+const DAYN=DATES.map(d=>Date.UTC(+d.slice(0,4),+d.slice(5,7)-1,+d.slice(8,10))/864e5);
+function addMonths(dn,m){const d=new Date(dn*864e5);let y=d.getUTCFullYear(),mo=d.getUTCMonth()+m;const day=d.getUTCDate();
+  y+=Math.floor(mo/12);mo=((mo%12)+12)%12;const dim=new Date(Date.UTC(y,mo+1,0)).getUTCDate();return Date.UTC(y,mo,Math.min(day,dim))/864e5;}
+// "1Y","18M","1.5Y","1Y6M","3M15D","1W" -> {mo,dy}. 숫자만 있으면 개월수 (VBA AddSpec 과 동일)
+function parseSpec(sp){const t=String(sp).toUpperCase().replace(/\s/g,"");let n="",mo=0,dy=0,hit=false;
+  for(const ch of t){if(/[0-9.]/.test(ch))n+=ch;else if(ch==="Y"){mo+=Math.round(+n*12);n="";hit=true;}else if(ch==="M"){mo+=Math.round(+n);n="";hit=true;}
+    else if(ch==="W"){dy+=Math.round(+n*7);n="";hit=true;}else if(ch==="D"){dy+=Math.round(+n);n="";hit=true;}else n="";}
+  if(!hit&&n){mo=Math.round(+n);hit=true;}return hit?{mo,dy}:null;}
+const addSpec=(dn,sp)=>{const p=parseSpec(sp);return addMonths(dn,p.mo)+p.dy;};
+function parseFwd(name){const m=String(name).replace(/\s/g,"").split(/[x×*]/i);if(m.length!==2)return null;
+  const a=parseSpec(m[0]),b=parseSpec(m[1]);return a&&b&&(b.mo||b.dy)?{start:m[0],tenor:m[1]}:null;}
+
+// 엑셀은 CD AAA 대표수익률을 사용. INFO_DATA 에 있으면 그것을, 없으면 CD 3M(적용일)을 사용
+const CD=BYNAME["CD 대표수익률"]||BYNAME["CD 3M"];
+const IRS_BASE=["IRS 6M","IRS 9M","IRS 1Y","IRS 18M","IRS 2Y","IRS 3Y","IRS 4Y","IRS 5Y","IRS 6Y","IRS 10Y"];
+const IRS_EXTRA=["IRS 7Y","IRS 8Y","IRS 9Y"];
+const irsMonths=n=>{const p=parseSpec(n.replace("IRS",""));return p?p.mo:0;};
+let fwMode=store.get("fwMode","SIMPLE"),fwExtra=store.get("fwExtra",false);
+const curveCache=new Map(),fwCache=new Map();
+
+function segSum(mode,gd,tt,tau,qprev,qn,dp,tp,zp,z,tn){
+  let s=0,Sd=0;
+  if(mode==="LZ"){for(let j=qprev+1;j<=qn;j++){const w=(gd[j]-dp)/(gd[qn]-dp),ex=Math.exp(-(zp+w*(z-zp))*tt[j]);s+=tau[j]*ex;Sd-=tau[j]*w*tt[j]*ex;}}
+  else{const f=(z*tn-zp*tp)/(tn-tp),dfdz=tn/(tn-tp);
+    for(let j=qprev+1;j<=qn;j++){const ex=Math.exp(-(zp*tp+f*(tt[j]-tp)));s+=tau[j]*ex;Sd-=tau[j]*(tt[j]-tp)*dfdz*ex;}}
+  return [s,Sd];
+}
+function buildCurve(i,mode){
+  const key=mode+"|"+fwExtra+"|"+i;if(curveCache.has(key))return curveCache.get(key);
+  let c=null;const cd=CD&&CD.v[i];
+  const q=(fwExtra?IRS_BASE.concat(IRS_EXTRA):IRS_BASE).map(n=>BYNAME[n]).filter(Boolean)
+    .map(s=>({m:irsMonths(s.name),r:s.v[i]})).filter(x=>x.r!=null&&x.m%3===0&&x.r>-5&&x.r<30).sort((a,b)=>a.m-b.m);
+  if(cd!=null&&cd>-5&&cd<=30&&q.length){
+    const spot=DAYN[i],maxQ=Math.floor(q[q.length-1].m/3);
+    if(maxQ>=2&&maxQ<=60){
+      const gd=[],tt=[],tau=[];
+      for(let k=0;k<=maxQ;k++){gd[k]=addMonths(spot,3*k)-spot;tt[k]=gd[k]/365;if(k>0)tau[k]=(gd[k]-gd[k-1])/365;}
+      const nD=[null,0,gd[1]],nZ=[null,0,-Math.log(1/(1+cd/100*tau[1]))/tt[1]*100];let n=2,ok=true;
+      let a=tau[1]*Math.exp(-nZ[2]/100*tt[1]);
+      for(const {m,r} of q){const qn=m/3|0;if(qn<=1)continue;if(gd[qn]<=nD[n])continue;
+        const cR=r/100,dp=nD[n],zp=nZ[n]/100,tp=dp/365,qprev=gd.indexOf(dp);if(qprev<0){ok=false;break;}
+        const tn=tt[qn];let z=cR,s,Sd;
+        for(let it=1;it<=12;it++){[s,Sd]=segSum(mode,gd,tt,tau,qprev,qn,dp,tp,zp,z,tn);
+          const g=cR*(a+s)+Math.exp(-z*tn)-1,g2=cR*Sd-tn*Math.exp(-z*tn);if(g2===0)break;z-=g/g2;if(Math.abs(g)<1e-10)break;}
+        [s,Sd]=segSum(mode,gd,tt,tau,qprev,qn,dp,tp,zp,z,tn);a+=s;n++;nD[n]=gd[qn];nZ[n]=z*100;}
+      if(ok)c={spot,nD,nZ,n,mode};
+    }
+  }
+  curveCache.set(key,c);return c;
+}
+function lnDF(c,dd){
+  if(dd<=0)return 0;if(dd<=c.nD[2])return -c.nZ[2]/100*dd/365;
+  let k=c.n-1;for(let i=2;i<=c.n-1;i++)if(dd<c.nD[i+1]){k=i;break;}
+  const w=(dd-c.nD[k])/(c.nD[k+1]-c.nD[k]);
+  if(c.mode==="LZ")return -(c.nZ[k]+(c.nZ[k+1]-c.nZ[k])*w)/100*dd/365;
+  const a=-c.nZ[k]/100*c.nD[k]/365,b=-c.nZ[k+1]/100*c.nD[k+1]/365;return a+(b-a)*w;
+}
+const DFat=(c,d)=>Math.exp(lnDF(c,d-c.spot));
+function fwdBoot(i,mode,start,tenor){const c=buildCurve(i,mode);if(!c)return null;
+  const d1=addSpec(c.spot,start),d2=addSpec(d1,tenor);if(d2<=d1)return null;return (DFat(c,d1)/DFat(c,d2)-1)/((d2-d1)/365)*100;}
+function quoteAt(i,mo){if(mo===3)return CD?CD.v[i]:null;const s=S.find(s=>s.group==="IRS"&&irsMonths(s.name)===mo);return s?s.v[i]:null;}
+function fwdSimple(i,start,tenor){const a=parseSpec(start),b=parseSpec(tenor);if(!a||!b||a.dy||b.dy)return null;
+  const dn=DAYN[i],yf=m=>(addMonths(dn,m)-dn)/365;const r2=quoteAt(i,a.mo+b.mo);if(r2==null)return null;
+  const T2=yf(a.mo+b.mo),Tf=yf(b.mo);
+  if(a.mo===0)return (Math.pow(1+r2/100,T2/Tf)-1)*100;
+  const r1=quoteAt(i,a.mo);if(r1==null)return null;
+  return (Math.pow(Math.pow(1+r2/100,T2)/Math.pow(1+r1/100,yf(a.mo)),1/Tf)-1)*100;}
+function fwdAt(i,name,mode=fwMode){const p=parseFwd(name);if(!p)return null;return mode==="SIMPLE"?fwdSimple(i,p.start,p.tenor):fwdBoot(i,mode,p.start,p.tenor);}
+function fwdSeries(name){const key=fwMode+"|"+fwExtra+"|"+name;if(!fwCache.has(key)){const v=new Array(N);for(let i=0;i<N;i++){const x=fwdAt(i,name);v[i]=x==null||!isFinite(x)?null:x;}fwCache.set(key,{name,v});}return fwCache.get(key);}
+
+const FW_PRESETS=["3Mx3M","6Mx3M","9Mx3M","1Yx6M","1.5Yx6M","1Yx1Y","2Yx1Y","5Yx5Y"];
+let fwCustom=store.get("fwCustom",[]).filter(n=>parseFwd(n)&&!FW_PRESETS.includes(n));
+let fwSel=store.get("fwSel",["3Mx3M","1Yx1Y","5Yx5Y"]);
+const fwAll=()=>FW_PRESETS.concat(fwCustom);
+const fwColor=n=>PAL[fwAll().indexOf(n)%PAL.length];
+const MODE_NOTE={SIMPLE:"엑셀 '선도금리' 시트와 같은 계산: 만기별 호가(3M=CD, 나머지=IRS)를 연복리로 보고 두 시점의 비율로 선도금리를 구합니다. 일수는 YEARFRAC(ACT/365).",
+  FF:"엑셀 '선도금리_new' 시트의 IRS_FWD와 같은 계산: CD 3M과 IRS 호가로 할인계수 커브를 부트스트래핑(구간 내 순간선도 일정)하고, 선도금리는 단리 ACT/365로 표시합니다.",
+  LZ:"부트스트래핑 + 무이표금리 선형보간(인포맥스 2620 방식). 그 밖의 규약은 FF와 같습니다."};
+function setFwMode(m){fwMode=m;store.set("fwMode",m);$$("#fwMode button").forEach(b=>b.classList.toggle("on",b.dataset.m===m));
+  $("#fwNote").textContent=MODE_NOTE[m]+` · 3M 금리: ${CD?CD.name:"없음"}`+(CD&&CD.name==="CD 3M"?" (엑셀은 CD 대표수익률을 사용 → 일부 날짜 1bp 내외 차이)":"");$("#fwExtra").disabled=m==="SIMPLE";}
+$("#fwMode").onclick=e=>{const b=e.target.closest("button");if(!b)return;setFwMode(b.dataset.m);renders.fwd();};
+$("#fwExtra").checked=fwExtra;$("#fwExtra").onchange=e=>{fwExtra=e.target.checked;store.set("fwExtra",fwExtra);renders.fwd();};
+$("#fwAdd").onclick=()=>{const v=$("#fwCustomIn").value.trim().replace(/\s/g,"").replace(/[×*X]/g,"x").toUpperCase().replace("X","x");
+  if(!parseFwd(v)){alert("형식을 확인하세요. 예) 2Yx3M, 1Yx2Y, 6Mx1D");return;}
+  if(!fwAll().includes(v))fwCustom.push(v);if(!fwSel.includes(v))fwSel.push(v);store.set("fwCustom",fwCustom);store.set("fwSel",fwSel);$("#fwCustomIn").value="";renders.fwd();};
+$("#fwCustomIn").onkeydown=e=>{if(e.key==="Enter")$("#fwAdd").click();};
+$("#fwTbl").onclick=e=>{const x=e.target.dataset.del;if(!x)return;fwCustom=fwCustom.filter(n=>n!==x);fwSel=fwSel.filter(n=>n!==x);store.set("fwCustom",fwCustom);store.set("fwSel",fwSel);renders.fwd();};
+$("#fwChips").onclick=e=>{const c=e.target.closest(".chip");if(!c)return;const n=c.dataset.n;fwSel=fwSel.includes(n)?fwSel.filter(x=>x!==n):fwSel.concat(n);store.set("fwSel",fwSel);drawFwChart();renderFwChips();};
+$("#fwOverlay").onchange=()=>drawFwChart();
+const fwRangeGet=rangeBar($("#fwRange"),"fwd","3Y",()=>drawFwChart());
+function renderFwChips(){$("#fwChips").innerHTML=fwAll().map(n=>`<span class="chip ${fwSel.includes(n)?"on":""}" data-n="${n}" ${fwSel.includes(n)?`style="background:${fwColor(n)};border-color:${fwColor(n)}"`:""}>${n}</span>`).join("");}
+function drawFwChart(){
+  const [i0,i1]=fwRangeGet();
+  const ls=fwAll().filter(n=>fwSel.includes(n)).map(n=>({label:n,color:fwColor(n),x:TS,y:fwdSeries(n).v}));
+  for(const o of $$("#fwOverlay input:checked")){const s=BYNAME[o.value];if(s)ls.push({label:o.value,color:css("--muted"),x:TS,y:s.v,step:o.value==="기준금리",width:o.value==="기준금리"?2:1});}
+  tsChart("fwChart",ls,{height:400,init:[TS[i0],TS[i1]],sync:"fwd"});
+  // 인상 횟수 = (선도 − 당일 기준금리)/0.25
+  const base=BYNAME["기준금리"];
+  const hk=fwAll().filter(n=>fwSel.includes(n)).map(n=>{const v=fwdSeries(n).v;
+    return {label:n,color:fwColor(n),x:TS,y:v.map((f,i)=>{const b=base?base.v[i]:null;return f==null||b==null?null:+((f-b)/0.25).toFixed(3);})};});
+  tsChart("fwHikeChart",hk,{height:300,unit:"회",zero:true,init:[TS[i0],TS[i1]],sync:"fwd"});
+}
+const FW_CMP=["WTD","1M","3M","6M","1Y"];let fwCmp=store.get("fwCmp",["1M"]).map(p=>p==="1W"?"WTD":p);
+$("#fwCmp").innerHTML=FW_CMP.map(p=>`<label><input type="checkbox" value="${p}" ${fwCmp.includes(p)?"checked":""}>${pLab(p)}</label>`).join("");
+$("#fwCmp").onchange=()=>{fwCmp=$$("#fwCmp input:checked").map(x=>x.value);store.set("fwCmp",fwCmp);drawFwPath();};
+$("#fwDate").min=DATES[0];$("#fwDate").max=DATES[LAST];$("#fwDate").onchange=()=>drawFwPath();
+const mLbl=m=>m===0?"현재":(m>=12?Math.floor(m/12)+"Y":"")+(m%12?m%12+"M":"");
+function drawFwPath(){
+  const pm=fwMode==="SIMPLE"?"FF":fwMode;
+  $("#fwPathNote").textContent=`3M 선도금리를 3개월씩 이어 붙인 경로입니다 (0×3M = CD 3M). ${fwMode==="SIMPLE"?"단순 방식으로는 중간 만기를 만들 수 없어 부트스트랩 FF로 계산합니다. ":""}인상 횟수는 (선도 − 기준일 기준금리)/0.25%p 입니다 (+ 인상, − 인하).`;
+  const bi=idxOnOrBefore($("#fwDate").value);if(bi<0)return;
+  const days=[...new Set([bi,...fwCmp.map(p=>shiftIdx(bi,p))].filter(i=>i>=0))];
+  const xs=[];for(let q=0;q<40;q++)xs.push(q/4);
+  const lines=days.map((di,k)=>({di,label:`${DATES[di]}`,color:PAL[k%PAL.length],y:xs.map(x=>{const v=fwdBoot(di,pm,Math.round(x*12)+"M","3M");return v==null?null:+v.toFixed(4);})}));
+  const base=BYNAME["기준금리"];const br=base?valAt(base,bi):null;
+  const id="fwPath",el=$("#"+id);if(plots[id]){plots[id].destroy();delete plots[id];}el.innerHTML="";
+  if(!window.uPlot||lines[0].y.every(v=>v==null)){el.innerHTML='<p class="hint" style="padding:40px;text-align:center">해당 일자의 CD·IRS 데이터가 없습니다.</p>';$("#fwPathTbl").innerHTML="";return;}
+  const ser=lines.map((l,k)=>({label:l.label,stroke:l.color,width:k?1.4:2.2,dash:k?[6,4]:[],paths:uPlot.paths.stepped({align:1}),value:(u,v)=>v==null?"-":v.toFixed(3)}));
+  const data=[xs,...lines.map(l=>l.y)];
+  if(br!=null){ser.push({label:"기준금리 "+DATES[bi],stroke:css("--muted"),width:1,dash:[2,3],value:(u,v)=>v==null?"-":v.toFixed(2)});data.push(xs.map(()=>br));}
+  plots[id]=new uPlot({width:el.clientWidth||800,height:380,scales:{x:{time:false}},
+    series:[{label:"시작",value:(u,v)=>v==null?"-":(v===0?"현재":mLbl(Math.round(v*12))+" 후")},...ser],
+    axes:[axis({values:(u,vs)=>vs.map(v=>v===0?"0":tenorLabel(v))}),axis({size:58,values:(u,vs)=>vs.map(v=>v.toFixed(2))})],
+    cursor:{drag:{x:false,y:false}}},data,el);
+  let h=`<thead><tr><th>시작</th><th>구간</th><th>${DATES[bi]}</th><th>기준금리 대비(bp)</th><th>인상 횟수</th>${lines.slice(1).map(l=>`<th>Δ vs ${l.label}(bp)</th>`).join("")}</tr></thead><tbody>`;
+  for(let q=0;q<=12;q++){const v=lines[0].y[q];const d=v==null||br==null?null:(v-br)*100;
+    const st=addMonths(DAYN[bi],3*q),en=addMonths(st,3),fmtd=dn=>new Date(dn*864e5).toISOString().slice(2,10);
+    h+=`<tr><td>${mLbl(q*3)}</td><td class="hint">${fmtd(st)}~${fmtd(en)}</td><td><b>${f3(v)}</b></td><td class="${cls(d)}">${fbp(d)}</td><td class="${cls(d)}">${d==null?"-":(d/25>0?"+":"")+(d/25).toFixed(2)+"회"}</td>${
+      lines.slice(1).map(l=>{const c=l.y[q]==null||v==null?null:(v-l.y[q])*100;return `<td class="${cls(c)}">${fbp(c)}</td>`;}).join("")}</tr>`;}
+  $("#fwPathTbl").innerHTML=h+"</tbody>";
+}
+renders.fwd=()=>{
+  setFwMode(fwMode);
+  const ref=fwdSeries("3Mx3M");const i=lastIdx(ref);
+  $("#fwAsOf").textContent=i>=0?`기준일 ${DATES[i]} · 단위 %, 변동 bp`:"";
+  if(!$("#fwDate").value&&i>=0)$("#fwDate").value=DATES[i];
+  let h=`<thead><tr><th>선도 (시작×기간)</th><th>현재</th>${PERIODS.map(p=>`<th>${p}</th>`).join("")}<th>1년 고</th><th>1년 저</th></tr></thead><tbody>`;
+  for(const n of fwAll()){const s=fwdSeries(n);const del=fwCustom.includes(n)?` <button class="btn" data-del="${n}" style="padding:0 6px;font-size:11px">삭제</button>`:"";
+    h+=`<tr>${dashRow(`<span style="color:${fwColor(n)}">●</span> ${n}${del}`,k=>valAt(s,k),i<0?LAST:i,false)}</tr>`;}
+  $("#fwTbl").innerHTML=h+"</tbody>";
+  renderFwChips();drawFwChart();drawFwPath();
+};
+
+/* ---------- 롤다운 분해 ----------
+   매수일 dA 에 잔존 T 채권을 사서 평가일 dB 까지 보유: Δ=(dB−dA)/365.25, T₂=T−Δ
+   기준물(국고·통안): 롤다운 y_A(T₂)−y_A(T), 델타 y_B(T₂)−y_A(T₂)
+   크레딧: g=국고, s=크레딧−국고 로 2×2 분해. 커브는 격자 사이 직선보간, 밖은 양 끝값 고정 */
+const RD_BASE=new Set(["국고채권","통안증권","미국채"]);
+const RD_EXCL=new Set(["은행채 AA+","CD","A1 CP","콜금리","기준금리","IRS"]);
+const rdShort=g=>g.replace("국고채권","국채").replace("통안증권","통안").replace(/^금융채\s*/,"")
+  .replace("기타금융채","캐피탈").replace("공사/공단채","공사채").replace(/([가-힣])(A|B)/,"$1 $2");
+const RD_GROUPS=GROUPS.filter(g=>!RD_EXCL.has(g)&&!/ACM/.test(g)&&BYGROUP[g].filter(s=>s.years!=null).length>1);
+const RD_KTB=BYGROUP["국고채권"]||[];
+// 채권 영업일(국고 3Y 가 있는 날)만 날짜 축으로 사용
+const RD_REF=RD_KTB.find(s=>s.years===3)||RD_KTB[0];
+const RD_IDX=[];for(let i=0;i<N;i++)if(RD_REF&&RD_REF.v[i]!=null)RD_IDX.push(i);
+const RD_LAST=RD_IDX[RD_IDX.length-1];
+function rdSnap(ds){let lo=0,hi=RD_IDX.length-1,r=0;while(lo<=hi){const m=(lo+hi)>>1;if(DATES[RD_IDX[m]]<=ds){r=m;lo=m+1;}else hi=m-1;}return RD_IDX[r];}
+function rdCurve(g,i){return BYGROUP[g].filter(s=>s.years!=null&&s.v[i]!=null).map(s=>[s.years,s.v[i]]).sort((a,b)=>a[0]-b[0]);}
+function rdInterp(c,t){if(!c.length)return null;if(t<=c[0][0])return c[0][1];const L=c[c.length-1];if(t>=L[0])return L[1];
+  for(let k=1;k<c.length;k++)if(t<=c[k][0]){const [x0,y0]=c[k-1],[x1,y1]=c[k];return y0+(y1-y0)*(t-x0)/(x1-x0);}return L[1];}
+
+let rd=store.get("rd",{today:true,dA:null,dB:null,group:"회사채AA-",T:3,view:"3"});
+if(!RD_GROUPS.includes(rd.group))rd.group=RD_GROUPS.includes("회사채AA-")?"회사채AA-":RD_GROUPS[0];
+$("#rdGroup").innerHTML=RD_GROUPS.map(g=>`<option value="${g}">${rdShort(g)}</option>`).join("");
+for(const id of ["#rdA","#rdB"]){$(id).min=DATES[RD_IDX[0]];$(id).max=DATES[RD_LAST];}
+const rdSave=()=>store.set("rd",rd);
+function rdSync(){
+  if(rd.today||!rd.dB)rd.dB=DATES[RD_LAST];
+  rd.dB=DATES[rdSnap(rd.dB)];
+  if(!rd.dA){const d=new Date(rd.dB+"T00:00:00Z");d.setUTCMonth(d.getUTCMonth()-6);rd.dA=d.toISOString().slice(0,10);}
+  rd.dA=DATES[rdSnap(rd.dA)];
+  $("#rdA").value=rd.dA;$("#rdB").value=rd.dB;$("#rdToday").checked=rd.today;$("#rdB").disabled=rd.today;
+  $("#rdGroup").value=rd.group;$("#rdT").value=rd.T;
+}
+$("#rdA").onchange=()=>{if($("#rdA").value){rd.dA=$("#rdA").value;rdSave();drawRoll();}};
+$("#rdB").onchange=()=>{if($("#rdB").value){rd.dB=$("#rdB").value;rdSave();drawRoll();}};
+$("#rdToday").onchange=()=>{rd.today=$("#rdToday").checked;rdSave();drawRoll();};
+$("#rdGroup").onchange=()=>{rd.group=$("#rdGroup").value;rdSave();drawRoll();};
+$("#rdT").onchange=()=>{const v=+$("#rdT").value;if(v>0){rd.T=v;rdSave();drawRoll();}};
+$("#rdOut").onclick=e=>{const b=e.target.closest("[data-view]");if(!b)return;rd.view=b.dataset.view;rdSave();drawRoll();};
+
+const bpTxt=v=>v==null?"-":fbp(v*100)+"bp";
+// ---------- BEP: 보유 N개월 동안 캐리+롤 이익이 0 이 되는 매도금리
+if(rd.bpN==null){rd.bpN=6;rd.bpF="none";rd.bpFv=0;}
+$("#bpN").onchange=()=>{const v=Math.round(+$("#bpN").value);if(v>0){rd.bpN=v;rdSave();drawBEP();}};
+$("#bpF").onchange=()=>{rd.bpF=$("#bpF").value;rdSave();drawBEP();};
+$("#bpFv").onchange=()=>{rd.bpF="custom";rd.bpFv=+$("#bpFv").value||0;rdSave();drawBEP();};
+function drawBEP(){
+  const iB=rdSnap(rd.dB),g=rd.group,T=rd.T,c=rdCurve(g,iB);
+  $("#bpN").value=rd.bpN;$("#bpF").value=rd.bpF;
+  let f=0;if(rd.bpF==="custom")f=+rd.bpFv||0;else if(rd.bpF!=="none"){const s=BYNAME[rd.bpF];f=s?valAt(s,iB)??0:0;}
+  $("#bpFv").value=f.toFixed(3);$("#bpFv").disabled=rd.bpF!=="custom";
+  $("#bpInfo").textContent=`기준: 평가일 ${DATES[iB]} 커브 · ${rdShort(g)} ${T}Y`;
+  if(!c.length){$("#bpOut").innerHTML='<p class="hint">해당 날짜의 커브가 없습니다.</p>';$("#bpTbl").innerHTML="";return;}
+  const y0=rdInterp(c,T);
+  const calc=Nm=>{const D=(addMonths(DAYN[iB],Nm)-DAYN[iB])/365,T2=T-D;if(T2<=0)return null;
+    const yR=rdInterp(c,T2),be=y0+(y0-f)*D/T2,ret=y0*D+T2*(y0-yR);
+    return {Nm,D,T2,yR,be,roll:(y0-yR)*100,room:(be-yR)*100,vsY0:(be-y0)*100,ret,ex:ret-f*D};};
+  const m=calc(rd.bpN);
+  if(!m){$("#bpOut").innerHTML='<p class="hint">보유기간이 만기보다 깁니다. 보유기간을 줄이거나 만기를 늘리세요.</p>';$("#bpTbl").innerHTML="";return;}
+  const st=[["매수 YTM y₀ (T "+T+"Y)",y0.toFixed(3)+"%"],["커브 불변 매도금리 y(T₂ "+m.T2.toFixed(2)+"Y)",m.yR.toFixed(3)+"%"],["롤 마진 y₀ − y(T₂)",fbp(m.roll)+"bp"],
+    ["BEP 매도금리",`${m.be.toFixed(3)}%`,1],["금리 상승 여유 BEP − y(T₂)",fbp(m.room)+"bp"],["BEP − y₀",fbp(m.vsY0)+"bp"],
+    ["커브 불변 시 보유수익률",`${m.ret.toFixed(3)}% <span class="hint">(연 ${(m.ret/m.D).toFixed(2)}%)</span>`],["조달 대비 초과수익",`${m.ex>=0?"+":""}${m.ex.toFixed(3)}% <span class="hint">(연 ${(m.ex/m.D>=0?"+":"")+(m.ex/m.D).toFixed(2)}%)</span>`]];
+  $("#bpOut").innerHTML=`<div class="stat">${st.map(([k,v,hl])=>`<div${hl?' style="border-color:var(--amber);box-shadow:inset 3px 0 0 var(--amber)"':""}><span>${k}</span><b${hl?' style="color:var(--amber);font-size:20px"':""}>${v}</b></div>`).join("")}</div>`;
+  const Ns=[...new Set([1,3,6,9,12,18,24,rd.bpN])].sort((a,b)=>a-b);
+  let h=`<thead><tr><th>보유</th><th>T₂</th><th>y(T₂)</th><th>롤 마진(bp)</th><th>BEP 매도금리</th><th>상승 여유(bp)</th><th>BEP − y₀(bp)</th><th>보유수익률</th><th>연환산</th></tr></thead><tbody>`;
+  for(const n of Ns){const r=calc(n);if(!r)continue;const on=n===rd.bpN?' style="outline:1px solid var(--amber);outline-offset:-1px"':"";
+    h+=`<tr${on}><td>${n}개월</td><td>${r.T2.toFixed(2)}Y</td><td>${r.yR.toFixed(3)}</td><td>${fbp(r.roll)}</td><td style="color:var(--amber)"><b>${r.be.toFixed(3)}</b></td><td>${fbp(r.room)}</td><td>${fbp(r.vsY0)}</td><td>${r.ret.toFixed(3)}%</td><td>${(r.ret/r.D).toFixed(2)}%</td></tr>`;}
+  $("#bpTbl").innerHTML=h+"</tbody>";
+}
+function drawRoll(){
+  rdSync();drawBEP();
+  let iA=rdSnap(rd.dA),iB=rdSnap(rd.dB),swapped=false;
+  if(iA>iB){[iA,iB]=[iB,iA];swapped=true;}
+  const g=rd.group,base=RD_BASE.has(g),T=rd.T;
+  const D=(DAYN[iB]-DAYN[iA])/365.25,T2=T-D;
+  const cA=rdCurve(g,iA),cB=rdCurve(g,iB),gA=rdCurve("국고채권",iA),gB=rdCurve("국고채권",iB);
+  const info=[`매수 ${DATES[iA]} → 평가 ${DATES[iB]}`,`보유 ${DAYN[iB]-DAYN[iA]}일 (Δ ${D.toFixed(3)}년)`,`T ${T}Y → T₂ ${T2.toFixed(3)}Y`];
+  if(swapped)info.push("※ 매수일이 평가일보다 늦어 두 날짜를 바꿔 계산");
+  if(T2>0&&cA.length&&T2<cA[0][0])info.push(`※ T₂가 최단 만기(${tenorLabel(cA[0][0])})보다 짧아 그 값으로 고정`);
+  $("#rdInfo").textContent=info.join(" · ");
+  const out=$("#rdOut");
+  if(!cA.length||!cB.length){out.innerHTML='<p class="hint">해당 날짜의 커브 데이터가 없습니다.</p>';rdChart(null);return;}
+  if(T2<=0){out.innerHTML='<p class="hint">보유기간이 만기 T보다 깁니다 (T₂ ≤ 0). 만기를 늘리거나 날짜를 바꾸세요.</p>';rdChart(null);return;}
+  const yA=t=>rdInterp(cA,t),yB=t=>rdInterp(cB,t);
+  const a=yA(T),b=yB(T2),tot=b-a;
+  let h=`<div class="rdhead"><div class="hint">${rdShort(g)} ${T}Y · ${DATES[iA]} 매수</div>
+    <div class="rdbig">${a.toFixed(3)}% → ${b.toFixed(3)}% <span class="${cls(tot*100)}">(${bpTxt(tot)})</span></div>
+    <div class="hint">금리 하락(−) = 채권 가격 상승</div></div>`;
+  let parts;
+  if(base){
+    const roll=yA(T2)-a,delta=b-yA(T2);
+    parts={roll,delta};
+    h+=`<table class="rdt"><tbody>
+      <tr><td>롤다운<div class="hint">y_A(T₂) − y_A(T)</div></td><td class="${cls(roll*100)}">${bpTxt(roll)}</td></tr>
+      <tr><td>델타<div class="hint">y_B(T₂) − y_A(T₂)</div></td><td class="${cls(delta*100)}">${bpTxt(delta)}</td></tr>
+      <tr class="sep"><td><b>합계</b></td><td class="${cls(tot*100)}"><b>${bpTxt(tot)}</b></td></tr></tbody></table>`;
+  }else{
+    const GA=t=>rdInterp(gA,t),GB=t=>rdInterp(gB,t),SA=t=>yA(t)-GA(t),SB=t=>yB(t)-GB(t);
+    const gR=GA(T2)-GA(T),sR=SA(T2)-SA(T),gC=GB(T2)-GA(T2),sC=SB(T2)-SA(T2);
+    parts={gR,sR,gC,sC};
+    const td=v=>`<td class="${cls(v*100)}">${bpTxt(v)}</td>`;
+    h+=`<div class="seg" style="margin:10px 0 6px"><button data-view="3" class="${rd.view!=="4"?"on":""}">3줄 보기</button><button data-view="4" class="${rd.view==="4"?"on":""}">2×2 보기</button></div>`;
+    if(rd.view==="4"){
+      h+=`<table class="rdt"><thead><tr><th></th><th>국고</th><th>스프레드</th><th>합</th></tr></thead><tbody>
+        <tr><td>롤다운</td>${td(gR)}${td(sR)}${td(gR+sR)}</tr>
+        <tr><td>커브변화</td>${td(gC)}${td(sC)}${td(gC+sC)}</tr>
+        <tr class="sep"><td><b>합</b></td>${td(gR+gC)}${td(sR+sC)}<td class="${cls(tot*100)}"><b>${bpTxt(tot)}</b></td></tr></tbody></table>`;
+    }else{
+      h+=`<table class="rdt"><tbody>
+        <tr><td>롤다운<div class="hint">국고 ${bpTxt(gR)} + 스프레드 ${bpTxt(sR)}</div></td>${td(gR+sR)}</tr>
+        <tr><td>국고 델타<div class="hint">g_B(T₂) − g_A(T₂)</div></td>${td(gC)}</tr>
+        <tr><td>스프레드<div class="hint">s_B(T₂) − s_A(T₂)</div></td>${td(sC)}</tr>
+        <tr class="sep"><td><b>합계</b></td><td class="${cls(tot*100)}"><b>${bpTxt(tot)}</b></td></tr></tbody></table>`;
+    }
+    h+=`<h2 style="margin-top:14px">수준</h2><table class="rdt"><thead><tr><th></th><th>매수 (T)</th><th>평가 (T₂)</th></tr></thead><tbody>
+      <tr><td>국고</td><td>${GA(T).toFixed(3)}%</td><td>${GB(T2).toFixed(3)}%</td></tr>
+      <tr><td>스프레드</td><td>${(SA(T)*100).toFixed(1)}bp</td><td>${(SB(T2)*100).toFixed(1)}bp</td></tr></tbody></table>`;
+  }
+  // 근사 수익률 = 캐리 + 가격효과 (듀레이션 ≈ 잔존만기 T₂)
+  const carry=a*D,price=-T2*tot;
+  h+=`<h2 style="margin-top:14px">근사 수익률 (보유기간, %)</h2><table class="rdt"><tbody>
+    <tr><td>이자(캐리)<div class="hint">y_A(T) × Δ</div></td><td>${carry.toFixed(3)}%</td></tr>
+    <tr><td>가격 효과<div class="hint">−T₂ × (y_B(T₂) − y_A(T))</div></td><td class="${cls(-price*100)}">${(price>=0?"+":"")+price.toFixed(3)}%</td></tr>
+    <tr class="sep"><td><b>합계</b><div class="hint">연환산 ${D>0?((carry+price)/D).toFixed(2)+"%":"-"}</div></td><td><b>${(carry+price).toFixed(3)}%</b></td></tr></tbody></table>
+    <p class="hint" style="margin:6px 0 0">듀레이션을 잔존만기(T₂)로 대신한 근사입니다. 쿠폰·볼록성·재투자는 반영하지 않습니다.</p>`;
+  out.innerHTML=h;
+  rdChart({g,base,iA,iB,T,T2,cA,cB,gA,gB,a,b,yA,yB});
+}
+
+// 커브 차트: 0~5Y(+여백), 매수일 실선+점, 평가일 커브, 크레딧이면 국고 두 커브 회색. 롤다운·커브변화 화살표
+const RD_TICKS=[0.25,0.5,0.75,1,1.5,2,2.5,3,4,5],RD_XMAX=5.3;
+function rdChart(m){
+  const id="rdChart",el=$("#"+id);
+  if(plots[id]){plots[id].destroy();delete plots[id];}el.innerHTML="";$("#rdLegend").innerHTML="";
+  if(!m||!window.uPlot)return;
+  const sets=[];
+  if(!m.base){sets.push({c:m.gA,label:"국채",date:DATES[m.iA],color:"rgba(120,128,140,.55)",w:1.2,pts:false,dash:[]});
+              sets.push({c:m.gB,label:"국채",date:DATES[m.iB],color:"rgba(120,128,140,.55)",w:1.2,pts:false,dash:[5,4]});}
+  sets.push({c:m.cA,label:rdShort(m.g),date:DATES[m.iA],color:PAL[0],w:2.2,pts:true,dash:[],main:true});
+  sets.push({c:m.cB,label:rdShort(m.g),date:DATES[m.iB],color:PAL[1],w:1.8,pts:true,dash:[]});
+  const xs=[...new Set(sets.flatMap(s=>s.c.map(p=>p[0])).filter(x=>x<=RD_XMAX+1))].sort((a,b)=>a-b);
+  const data=[xs,...sets.map(s=>{const mp=new Map(s.c);return xs.map(x=>mp.has(x)?mp.get(x):null);})];
+  const tip=document.createElement("div");tip.className="rdtip";tip.style.display="none";
+  const P=(u,x,y)=>[u.valToPos(x,"x"),u.valToPos(y,"y")];
+  // 화살표: 바탕색 테두리(halo) + 굵은 선 + 큰 화살촉
+  function arrow(u,x1,y1,x2,y2,col,dash){const c=u.ctx,d=devicePixelRatio;const [ax,ay]=[u.valToPos(x1,"x",true),u.valToPos(y1,"y",true)],[bx,by]=[u.valToPos(x2,"x",true),u.valToPos(y2,"y",true)];
+    const L=Math.hypot(bx-ax,by-ay),an=Math.atan2(by-ay,bx-ax),hs=Math.min(13*d,L*0.6),ex=bx-hs*0.8*Math.cos(an),ey=by-hs*0.8*Math.sin(an);
+    const head=()=>{c.beginPath();c.moveTo(bx,by);c.lineTo(bx-hs*Math.cos(an-0.42),by-hs*Math.sin(an-0.42));c.lineTo(bx-hs*Math.cos(an+0.42),by-hs*Math.sin(an+0.42));c.closePath();};
+    c.save();c.lineCap="round";c.lineJoin="round";
+    c.strokeStyle=css("--panel");c.lineWidth=7*d;c.setLineDash([]);c.beginPath();c.moveTo(ax,ay);c.lineTo(ex,ey);c.stroke();if(L>4*d){head();c.lineWidth=4*d;c.stroke();}
+    c.strokeStyle=col;c.fillStyle=col;c.lineWidth=3.5*d;c.setLineDash(dash.map(v=>v*d));c.beginPath();c.moveTo(ax,ay);c.lineTo(ex,ey);c.stroke();c.setLineDash([]);
+    if(L>4*d){head();c.fill();}
+    c.restore();}
+  // 값 라벨 (둥근 상자)
+  function tag(u,px,py,txt,col,align){const c=u.ctx,d=devicePixelRatio;c.save();c.textAlign="left";c.font=`600 ${12*d}px sans-serif`;
+    const w=c.measureText(txt).width+12*d,h=20*d;let x=align==="left"?px-w-8*d:px+8*d;const y=py-h/2;
+    x=Math.max(u.bbox.left+2*d,Math.min(x,u.bbox.left+u.bbox.width-w-2*d));
+    c.fillStyle=css("--panel");c.strokeStyle=col;c.lineWidth=1.5*d;c.beginPath();c.roundRect?c.roundRect(x,y,w,h,5*d):c.rect(x,y,w,h);c.fill();c.stroke();
+    c.fillStyle=col;c.textAlign="left";c.textBaseline="middle";c.fillText(txt,x+6*d,y+h/2);c.restore();}
+  const rA2=m.yA(m.T2);
+  plots[id]=new uPlot({width:el.clientWidth||700,height:420,
+    scales:{x:{time:false,range:()=>[0,RD_XMAX]},y:{range:(u,mn,mx)=>{const p=Math.max(0.05,(mx-mn)*0.08);return [mn-p,mx+p];}}},
+    series:[{label:"만기"},...sets.map(s=>({label:s.label+" "+s.date,stroke:s.color,width:s.w,dash:s.dash,spanGaps:true,points:{show:s.pts,size:s.main?7:5,fill:s.color,stroke:s.color}}))],
+    axes:[axis({splits:()=>RD_TICKS,values:(u,vs)=>{let last=-1e9;return vs.map(v=>{const x=u.valToPos(v,"x");if(x-last<26)return"";last=x;return tenorLabel(v);});}}),axis({size:58,values:(u,vs)=>vs.map(v=>v.toFixed(2))})],
+    cursor:{drag:{x:false,y:false},points:{show:false}},legend:{show:false},
+    hooks:{
+      draw:[u=>{const d=devicePixelRatio,c=u.ctx;
+        // T·T₂ 세로 안내선
+        c.save();c.strokeStyle=css("--muted");c.globalAlpha=.5;c.lineWidth=1*d;c.setLineDash([2*d,4*d]);
+        for(const x of [m.T,m.T2]){const px=u.valToPos(x,"x",true);c.beginPath();c.moveTo(px,u.bbox.top);c.lineTo(px,u.bbox.top+u.bbox.height);c.stroke();}c.restore();
+        for(const [x,y,col] of [[m.T,m.a,PAL[0]],[m.T2,m.b,PAL[1]]]){c.save();c.fillStyle=col;c.strokeStyle=css("--panel");c.lineWidth=2.5*d;c.beginPath();c.arc(u.valToPos(x,"x",true),u.valToPos(y,"y",true),6*d,0,7);c.fill();c.stroke();c.restore();}
+        arrow(u,m.T,m.a,m.T2,rA2,"#16a34a",[]);
+        arrow(u,m.T2,rA2,m.T2,m.b,"#dc2626",[7,5]);
+        // 중간 지점 원(롤다운 끝 = 커브변화 시작)
+        c.save();c.fillStyle=css("--panel");c.strokeStyle="#16a34a";c.lineWidth=2.5*d;c.beginPath();c.arc(u.valToPos(m.T2,"x",true),u.valToPos(rA2,"y",true),5*d,0,7);c.fill();c.stroke();c.restore();
+        const rb=(rA2-m.a)*100,cb=(m.b-rA2)*100;
+        tag(u,(u.valToPos(m.T,"x",true)+u.valToPos(m.T2,"x",true))/2,(u.valToPos(m.a,"y",true)+u.valToPos(rA2,"y",true))/2+(rb<=0?16:-16)*d,`롤다운 ${fbp(rb)}bp`,"#16a34a","right");
+        tag(u,u.valToPos(m.T2,"x",true),(u.valToPos(rA2,"y",true)+u.valToPos(m.b,"y",true))/2,`커브변화 ${fbp(cb)}bp`,"#dc2626","left");
+        c.save();c.fillStyle=css("--muted");c.font=`${11*d}px sans-serif`;c.fillText("T",u.valToPos(m.T,"x",true)-3*d,u.bbox.top+u.bbox.height-4*d);c.fillText("T₂",u.valToPos(m.T2,"x",true)-6*d,u.bbox.top+u.bbox.height-4*d);c.restore();}],
+      setCursor:[u=>{const {left,top}=u.cursor;if(left==null||left<0){tip.style.display="none";u.over.style.cursor="";return;}
+        let best=null,bd=14;
+        sets.forEach((s,k)=>{for(const [x,y] of s.c){if(x>RD_XMAX)continue;const [px,py]=P(u,x,y),dd=Math.hypot(px-left,py-top);if(dd<bd){bd=dd;best={s,x,y,px,py};}}});
+        if(!best){tip.style.display="none";u.over.style.cursor="";return;}
+        u.over.style.cursor=best.s.main?"pointer":"";
+        tip.innerHTML=`<b>${best.x.toFixed(1)}Y</b><br>${best.y.toFixed(3)}%<br>${best.s.label}<br><span class="hint">${best.s.date}</span>`;
+        tip.style.display="block";
+        // 오른쪽 공간이 모자라면 점의 왼쪽에 표시
+        let tx=best.px+u.over.offsetLeft+12;if(tx+tip.offsetWidth>el.clientWidth)tx=best.px+u.over.offsetLeft-tip.offsetWidth-12;
+        tip.style.left=tx+"px";tip.style.top=(best.py+u.over.offsetTop-10)+"px";}]
+    }},data,el);
+  el.appendChild(tip);
+  // 매수일 커브의 점 클릭 → 그 만기를 T 로
+  plots[id].over.addEventListener("click",()=>{const u=plots[id];const {left,top}=u.cursor;let best=null,bd=14;
+    for(const [x,y] of m.cA){if(x>RD_XMAX)continue;const [px,py]=P(u,x,y),dd=Math.hypot(px-left,py-top);if(dd<bd){bd=dd;best=x;}}
+    if(best!=null){rd.T=best;rdSave();drawRoll();}});
+  $("#rdLegend").innerHTML=sets.map(s=>`<span><i style="background:${s.color};${s.dash.length?"height:0;border-top:2px dashed "+s.color+";background:none":""}"></i>${s.label} ${s.date}</span>`).join("")
+    +`<span><i style="background:#16a34a"></i>롤다운</span><span><i style="height:0;border-top:2px dashed #dc2626;background:none"></i>커브 변화</span>`;
+}
+renders.roll=drawRoll;
+
+/* ---------- 미국채 (ACM 기간프리미엄) ----------
+   ACM 모형금리 = 위험중립(단기금리 기대 평균) + 기간프리미엄. 뉴욕연준 ACMTermPremium.xls */
+const ACM_LAB={Y:"모형금리",RN:"위험중립",TP:"기간프리미엄"};
+const ACMC=(c,k,n)=>BYNAME[`${c==="KR"?"국고 ":""}ACM ${ACM_LAB[k]} ${n}Y`];
+const ACM=(k,n)=>ACMC(us.cty,k,n);
+const CTY={US:{mkt:n=>`미국채 ${n}Y`,pol:"미국 기준금리",polLab:"미국 기준금리",mktLab:"미국채",
+  note:"뉴욕연준이 공개하는 ACM 추정치 (팩터 5개, 1961년~). 업데이트.bat 실행 시 자동으로 받아옵니다."},
+  KR:{mkt:n=>`국고채권 ${n}Y`,pol:"기준금리",polLab:"한국 기준금리",mktLab:"국고",
+  note:"국내ACM.xlsx 의 2001년~ 월말 국고 금리로 같은 ACM 방식을 자체 추정 (팩터 3개, 콜금리를 단기금리로 사용). 수준은 추정기간에 따라 ±20~40bp 달라질 수 있어 방향·변화 위주로 보세요."}};
+const US_MATS=[1,2,3,4,5,6,7,8,9,10];
+let us=store.get("us",{mat:10,kind:"TP",cmp:["1M","1Y"]});if(!us.cty)us.cty="US";
+const HAS_ACM=()=>!!ACM("TP",10);
+$("#usCty").onclick=e=>{const b=e.target.closest("button");if(!b)return;us.cty=b.dataset.c;store.set("us",us);renders.ust();};
+$("#usMat").innerHTML=US_MATS.map(n=>`<option value="${n}">${n}Y</option>`).join("");
+$("#usMat").onchange=()=>{us.mat=+$("#usMat").value;store.set("us",us);drawUsDec();};
+$("#usKind").onclick=e=>{const b=e.target.closest("button");if(!b)return;us.kind=b.dataset.k;store.set("us",us);drawUsCurve();};
+us.cmp=us.cmp.map(p=>p==="1W"?"WTD":p);
+$("#usCmp").innerHTML=["WTD","1M","3M","1Y"].map(p=>`<label><input type="checkbox" value="${p}" ${us.cmp.includes(p)?"checked":""}>${pLab(p)}</label>`).join("");
+$("#usCmp").onchange=()=>{us.cmp=$$("#usCmp input:checked").map(x=>x.value);store.set("us",us);drawUsCurve();};
+const usRangeGet=rangeBar($("#usRange"),"us","5Y",()=>drawUsDec());
+const usMkt=n=>BYNAME[CTY[us.cty].mkt(n)];
+
+function drawUsCards(){
+  const C=CTY[us.cty],P=us.cty==="KR"?"국고 ":"";
+  const items=[[C.polLab,C.pol,"%"],[`${C.mktLab} 2Y`,C.mkt(2),"%"],[`${C.mktLab} 10Y`,C.mkt(10),"%"],
+    ["10Y 위험중립 (ACM)",`${P}ACM 위험중립 10Y`,"%"],["10Y 기간프리미엄 (ACM)",`${P}ACM 기간프리미엄 10Y`,"bp"]];
+  let h="";
+  for(const [lab,n,u] of items){const s=BYNAME[n];if(!s)continue;const i=lastIdx(s),j=i>0?shiftIdx(i,"1D"):-1;
+    let p=null;for(let k=i-1;k>=0;k--)if(s.v[k]!=null){p=s.v[k];break;}
+    const c=s.v[i],d=c!=null&&p!=null?(c-p)*100:null;
+    h+=`<div class="card"><div class="k">${lab}</div><div class="v">${u==="bp"?(c*100).toFixed(1)+"<span style='font-size:13px'>bp</span>":c.toFixed(3)}</div><div class="c ${cls(d)}">${d==null?"":(d>0?"▲ ":d<0?"▼ ":"")+fbp(d)+"bp"} <span class="hint">${DATES[i].slice(5)}</span></div></div>`;}
+  const a=BYNAME[C.mkt(10)],b=BYNAME[C.mkt(2)];
+  if(a&&b){const i=lastIdx(a),v=(a.v[i]-b.v[i])*100;h+=`<div class="card"><div class="k">${C.mktLab} 10Y−2Y</div><div class="v">${v.toFixed(1)}<span style='font-size:13px'>bp</span></div><div class="c hint">${DATES[i].slice(5)}</div></div>`;}
+  $("#usCards").innerHTML=h;
+}
+function drawUsDec(){
+  const n=us.mat;$("#usMat").value=n;$("#usDecTitle").textContent=`${n}Y 금리 분해 (ACM)`;
+  const [i0,i1]=usRangeGet();const x=TS,ls=[];
+  const M=usMkt(n);if(M)ls.push({label:`${CTY[us.cty].mktLab} ${n}Y (실제)`,color:PAL[1],x,y:M.v,width:1.6});
+  ls.push({label:`ACM 모형 ${n}Y`,color:PAL[9],x,y:ACM("Y",n).v,width:1.4,dash:[5,4]});
+  ls.push({label:`위험중립 ${n}Y`,color:PAL[2],x,y:ACM("RN",n).v,width:2});
+  const FF=BYNAME[CTY[us.cty].pol];if(FF)ls.push({label:CTY[us.cty].polLab,color:PAL[8],x,y:FF.v,step:true,width:1.6});
+  ls.push({label:`기간프리미엄 ${n}Y (bp, 우)`,color:PAL[3],x,y:ACM("TP",n).v.map(v=>v==null?null:+(v*100).toFixed(1)),width:1.8,y2:true});
+  tsChart("usDecChart",ls,{height:420,init:[TS[i0],TS[i1]]});
+}
+function drawUsCurve(){
+  $$("#usKind button").forEach(b=>b.classList.toggle("on",b.dataset.k===us.kind));
+  const id="usCurve",el=$("#"+id);if(plots[id]){plots[id].destroy();delete plots[id];}el.innerHTML="";
+  const ref=ACM("TP",10),bi=lastIdx(ref);if(bi<0||!window.uPlot)return;
+  const days=[bi];const tags={[bi]:DATES[bi].slice(2)};
+  for(const p of us.cmp){const j=shiftIdx(bi,p);let k=j;while(k>0&&ref.v[k]==null)k--;if(k>=0&&!days.includes(k)){days.push(k);tags[k]=pLab(p);}}
+  const bp=us.kind==="TP",xs=US_MATS;
+  const lines=days.map((di,k)=>({label:`${tags[di]} (${DATES[di]})`,tag:tags[di],color:PAL[[0,1,2,5][k%4]],
+    y:xs.map(n=>{const s=ACM(us.kind,n),v=s?valAt(s,di):null;return v==null?null:+(bp?v*100:v).toFixed(bp?1:3);})}));
+  plots[id]=new uPlot({width:el.clientWidth||600,height:320,padding:[12,70,null,null],scales:{x:{time:false,range:()=>[0.6,10.4]}},
+    series:[{label:"만기",value:(u,v)=>v==null?"-":v+"Y"},...lines.map((l,k)=>({label:l.label,stroke:l.color,width:k?1.5:2.4,dash:k?[6,4]:[],points:{show:true,size:5,fill:l.color},
+      value:(u,v)=>v==null?"-":bp?v.toFixed(1)+"bp":v.toFixed(3)+"%"}))],
+    axes:[axis({splits:()=>xs,values:(u,vs)=>vs.map(v=>v+"Y")}),axis({size:58,values:(u,vs)=>vs.map(v=>bp?v.toFixed(0)+"bp":v.toFixed(2))})],
+    cursor:{drag:{x:false,y:false}},
+    hooks:{draw:[u=>{const c=u.ctx,d=devicePixelRatio;c.save();c.font=`700 ${11*d}px Consolas,monospace`;c.textBaseline="middle";c.textAlign="left";
+      for(const l of lines){const k=l.y.length-1;if(l.y[k]==null)continue;c.fillStyle=l.color;c.fillText(l.tag,u.valToPos(xs[k],"x",true)+8*d,u.valToPos(l.y[k],"y",true));}
+      if(bp){const y=u.valToPos(0,"y",true);if(y>u.bbox.top&&y<u.bbox.top+u.bbox.height){c.strokeStyle=css("--fg");c.globalAlpha=.4;c.setLineDash([4*d,4*d]);c.beginPath();c.moveTo(u.bbox.left,y);c.lineTo(u.bbox.left+u.bbox.width,y);c.stroke();}}
+      c.restore();}]}},[xs,...lines.map(l=>l.y)],el);
+}
+function drawUsTable(){
+  const ref=ACM("TP",10),i=lastIdx(ref);$("#usAsOf").textContent=`ACM 기준일 ${DATES[i]}`;
+  const ch=(s,p,k=1)=>{const c=valAt(s,i),j=shiftIdx(i,p),v=j>=0?valAt(s,j):null;return c==null||v==null?null:(c-v)*100;};
+  let h=`<thead><tr><th>만기</th><th>실제</th><th>모형</th><th>위험중립</th><th>기간프리미엄</th><th>MTD Δ위험중립</th><th>MTD Δ프리미엄</th><th>YTD Δ위험중립</th><th>YTD Δ프리미엄</th></tr></thead><tbody>`;
+  for(const n of US_MATS){const Y=ACM("Y",n),R=ACM("RN",n),T=ACM("TP",n),M=usMkt(n);
+    const td=v=>`<td class="${cls(v)}">${fbp(v)}</td>`;
+    h+=`<tr><td>${n}Y</td><td>${M?f3(valAt(M,i)):"-"}</td><td>${f3(valAt(Y,i))}</td><td>${f3(valAt(R,i))}</td><td><b>${(valAt(T,i)*100).toFixed(1)}bp</b></td>${td(ch(R,"MTD"))}${td(ch(T,"MTD"))}${td(ch(R,"YTD"))}${td(ch(T,"YTD"))}</tr>`;}
+  $("#usTbl").innerHTML=h+"</tbody>";
+}
+// 한·미 기간프리미엄 비교
+$("#usCmpMat").innerHTML=US_MATS.map(n=>`<option value="${n}" ${n===10?"selected":""}>${n}Y</option>`).join("");
+$("#usCmpMat").onchange=()=>drawUsCmp();
+const usCmpRangeGet=rangeBar($("#usCmpRange"),"usCmp","10Y",()=>drawUsCmp());
+function drawUsCmp(){
+  const n=+$("#usCmpMat").value,[i0,i1]=usCmpRangeGet(),ls=[];
+  const bp=s=>s.v.map(v=>v==null?null:+(v*100).toFixed(1));
+  const U=ACMC("US","TP",n),K=ACMC("KR","TP",n);
+  if(K)ls.push({label:`한국 ${n}Y 기간프리미엄`,color:PAL[0],x:TS,y:bp(K),width:2});
+  if(U)ls.push({label:`미국 ${n}Y 기간프리미엄`,color:PAL[1],x:TS,y:bp(U),width:2});
+  if(K&&U){const k=bp(K),u=bp(U);let lu=null;ls.push({label:"한−미 (bp)",color:PAL[8],dash:[4,3],width:1.2,x:TS,y:k.map((v,i)=>{if(u[i]!=null)lu=u[i];return v==null||lu==null?null:+(v-lu).toFixed(1);})});}
+  tsChart("usCmpChart",ls,{unit:"bp",zero:true,height:340,init:[TS[i0],TS[i1]]});
+}
+renders.ust=()=>{
+  $$("#usCty button").forEach(b=>b.classList.toggle("on",b.dataset.c===us.cty));
+  $("#usCtyNote").textContent=CTY[us.cty].note;
+  drawUsCards();
+  $("#usNoAcm").style.display=HAS_ACM()?"none":"";
+  if(HAS_ACM()){drawUsDec();drawUsCurve();drawUsTable();}
+  drawUsCmp();
+};
+
+/* ---------- TP 활용 ----------
+   ① 변동 원인 분해 ② 밸류에이션 위치 ③ 신호판 ④ 한·미 동일조건 비교 */
+const TPU={KR:{a:(k,n)=>BYNAME[`국고 ACM ${ACM_LAB[k]} ${n}Y`],mkt:n=>BYNAME[`국고채권 ${n}Y`],pol:"기준금리",lab:"국고"},
+           US:{a:(k,n)=>BYNAME[`ACM ${ACM_LAB[k]} ${n}Y`],mkt:n=>BYNAME[`미국채 ${n}Y`],pol:"미국 기준금리",lab:"미국채"}};
+let tpu=store.get("tpu",{cty:"ALL",mat:10});if(!tpu.v2){tpu.cty="ALL";tpu.v2=1;}
+$("#tpuMat").innerHTML=US_MATS.map(n=>`<option value="${n}">${n}Y</option>`).join("");
+$("#tpuCty").onclick=e=>{const b=e.target.closest("button");if(!b)return;tpu.cty=b.dataset.c;store.set("tpu",tpu);renders.tpu();};
+$("#tpuMat").onchange=()=>{tpu.mat=+$("#tpuMat").value;store.set("tpu",tpu);renders.tpu();};
+const tpuDecRangeGet=rangeBar($("#tpuDecRange"),"tpuDec","1Y",()=>drawTpuDecChart());
+const tpuCmpRangeGet=rangeBar($("#tpuCmpRange"),"tpuCmp","10Y",()=>drawTpuCmp());
+const T13=idxOnOrAfter("2013-01-01");
+function pctOf(arr,v){let n=0,le=0;for(let i=T13;i<arr.length;i++){const x=arr[i];if(x==null)continue;n++;if(x<=v)le++;}return n?le/n*100:null;}
+function lastVal(arr){for(let i=arr.length-1;i>=0;i--)if(arr[i]!=null)return [arr[i],i];return [null,-1];}
+
+// ① 변동 원인 분해
+function drawTpuDec(){
+  const C=TPU[tpu.cty],n=tpu.mat,M=C.mkt(n),R=C.a("RN",n),T=C.a("TP",n),Yh=C.a("Y",n);
+  const i=lastIdx(T);$("#tpuDecAsOf").textContent=`${C.lab} ${n}Y · 기준일 ${DATES[i]}${M?"":" · 이 만기는 시장금리 없음(모형만)"}`;
+  const d=(s,j)=>{if(!s)return null;const a=valAt(s,i),b=valAt(s,j);return a==null||b==null?null:(a-b)*100;};
+  let h=`<thead><tr><th>기간</th><th>비교일</th><th>실제 금리 Δ</th><th>정책기대(위험중립) Δ</th><th>기간프리미엄 Δ</th><th>모형오차 Δ</th><th>주도 요인</th></tr></thead><tbody>`;
+  for(const p of ["WTD","MTD","QTD","YTD","1Y"]){const j=shiftIdx(i,p);if(j<0)continue;
+    const ra=d(M,j),rn=d(R,j),tp=d(T,j),ym=d(Yh,j),res=ra==null||ym==null?null:ra-ym;
+    let lead="혼합";if(rn!=null&&tp!=null){const A=Math.abs(rn),B=Math.abs(tp);if(A+B<2)lead="변동 미미";else if(B>A*1.5)lead=`<b style="color:var(--amber)">프리미엄 주도</b>`;else if(A>B*1.5)lead="<b>정책기대 주도</b>";}
+    const td=v=>`<td class="${cls(v)}">${fbp(v)}</td>`;
+    h+=`<tr><td>${p}</td><td class="hint">${DATES[j]}</td>${td(ra)}${td(rn)}${td(tp)}<td class="hint">${fbp(res)}</td><td style="text-align:left">${lead}</td></tr>`;}
+  $("#tpuDecTbl").innerHTML=h+"</tbody>";
+  drawTpuDecChart();
+}
+function drawTpuDecChart(){
+  const C=TPU[tpu.cty],n=tpu.mat,[i0,i1]=tpuDecRangeGet();
+  const cum=s=>{if(!s)return null;let b=null;for(let k=i0;k<=i1&&b==null;k++)b=s.v[k];return s.v.map(v=>v==null||b==null?null:+((v-b)*100).toFixed(1));};
+  const ls=[];const M=C.mkt(n);
+  if(M)ls.push({label:`실제 ${n}Y`,color:PAL[8],x:TS,y:cum(M),width:1.6});
+  ls.push({label:"정책기대(위험중립)",color:PAL[1],x:TS,y:cum(C.a("RN",n)),width:2});
+  ls.push({label:"기간프리미엄",color:PAL[0],x:TS,y:cum(C.a("TP",n)),width:2});
+  tsChart("tpuDecChart",ls,{unit:"bp",zero:true,height:320,init:[TS[i0],TS[i1]]});
+}
+
+// ② 밸류에이션 위치
+function drawTpuVal(){
+  const C=TPU[tpu.cty],n=tpu.mat,T=C.a("TP",n);
+  const arr=T.v.map(v=>v==null?null:v*100);const [cur,ci]=lastVal(arr);
+  const xs=[];let mx=-1e9,mn=1e9,mxi=0,mni=0;for(let i=T13;i<arr.length;i++){const v=arr[i];if(v==null)continue;xs.push(v);if(v>mx){mx=v;mxi=i;}if(v<mn){mn=v;mni=i;}}
+  const mean=xs.reduce((a,b)=>a+b,0)/xs.length,sd=Math.sqrt(xs.reduce((a,b)=>a+(b-mean)**2,0)/(xs.length-1)),pct=pctOf(arr,cur);
+  const j1=shiftIdx(ci,"1Y"),y1=j1>=0?valAt({v:arr},j1):null;
+  const st=[["현재",cur.toFixed(1)+"bp"],["백분위",pct.toFixed(0)+"%"],["Z-score",((cur-mean)/sd).toFixed(2)],["평균",mean.toFixed(1)+"bp"],
+    ["최고",`${mx.toFixed(0)}bp <span class="hint">${DATES[mxi].slice(2)}</span>`],["최저",`${mn.toFixed(0)}bp <span class="hint">${DATES[mni].slice(2)}</span>`],["1년 전 대비",y1==null?"-":fbp(cur-y1)+"bp"]];
+  $("#tpuValStat").innerHTML=st.map(([k,v])=>`<div><span>${k}</span><b>${v}</b></div>`).join("");
+  tsChart("tpuValChart",[{label:`${C.lab} ${n}Y 기간프리미엄 (bp)`,color:PAL[0],x:TS,y:arr,width:1.9}],{unit:"bp",zero:true,height:320,bands:{mean,sd}});
+}
+
+// ③ 신호판
+const tpuCache={};
+function seriesBp(key,fn){if(!tpuCache[key]){const v=new Array(N);for(let i=0;i<N;i++){const x=fn(i);v[i]=x==null||!isFinite(x)?null:x;}tpuCache[key]=v;}return tpuCache[key];}
+function drawTpuSig(){
+  const c=tpu.cty,C=TPU[c],P=BYNAME[C.pol];
+  const rows=[];
+  const diff=(a,b)=>i=>{const x=a?a.v[i]:null,y=b?valAt(b,i):null;return x==null||y==null?null:(x-y)*100;};
+  rows.push({k:`10Y 기간프리미엄`,unit:"bp",arr:seriesBp(c+"tp10",i=>{const s=C.a("TP",10);return s&&s.v[i]!=null?s.v[i]*100:null;}),kind:"lvl"});
+  rows.push({k:`모형 기대: 2Y 위험중립 − 기준금리`,unit:"bp",arr:seriesBp(c+"rn2",diff(C.a("RN",2),P)),kind:"pol"});
+  if(c==="KR"){
+    rows.push({k:`시장 내재: 1Yx1Y 선도 − 기준금리`,unit:"bp",arr:seriesBp("kr11",i=>{const f=fwdAt(i,"1Yx1Y","FF"),b=P?valAt(P,i):null;return f==null||b==null?null:(f-b)*100;}),kind:"pol"});
+    rows.push({k:`시장 내재 − 모형 기대 (1Yx1Y 선도 − 2Y 위험중립)`,unit:"bp",arr:seriesBp("krmm",i=>{const f=fwdAt(i,"1Yx1Y","FF"),r=C.a("RN",2);const x=r?r.v[i]:null;return f==null||x==null?null:(f-x)*100;}),kind:"gap"});
+    rows.push({k:`커브 기울기: 국고 10Y − 3Y`,unit:"bp",arr:seriesBp("krsl",diff(C.mkt(10),C.mkt(3))),kind:"lvl"});
+    rows.push({k:`10Y 6개월 롤다운 (y10 − y9.5)`,unit:"bp",arr:seriesBp("krroll",i=>{const a=C.mkt(10),b=BYNAME["국고채권 7Y"];const x=a?a.v[i]:null,y=b?b.v[i]:null;return x==null||y==null?null:(x-(y+(x-y)*2.5/3))*100;}),kind:"lvl"});
+  }else{
+    rows.push({k:`커브 기울기: 미국채 10Y − 2Y`,unit:"bp",arr:seriesBp("ussl",diff(C.mkt(10),C.mkt(2))),kind:"lvl"});
+  }
+  const say=(r,v,p)=>{
+    let t=p>=80?`과거 대비 <b>높은 편</b> (상위 ${(100-p).toFixed(0)}%)`:p<=20?`과거 대비 <b>낮은 편</b> (하위 ${p.toFixed(0)}%)`:"과거 대비 중간 수준";
+    if(r.kind==="pol")t+=` · ${v>0?"인상":"인하"} 쪽 약 ${Math.abs(v/25).toFixed(1)}회 반영`;
+    if(r.kind==="gap")t+=v>0?" · 시장이 모형보다 금리 경로를 높게 봄":" · 시장이 모형보다 금리 경로를 낮게 봄";
+    return t;};
+  let h=`<thead><tr><th>지표</th><th>현재</th><th>1개월 전</th><th>백분위</th><th style="text-align:left">해석</th></tr></thead><tbody>`;
+  for(const r of rows){const [v,i]=lastVal(r.arr);if(v==null)continue;const j=shiftIdx(i,"1M"),pv=j>=0?valAt({v:r.arr},j):null,p=pctOf(r.arr,v);
+    h+=`<tr><td>${r.k}</td><td><b>${(v>0&&r.kind!=="lvl"?"+":"")+v.toFixed(1)}</b><span class="hint">${r.unit} · ${DATES[i].slice(5)}</span></td><td>${pv==null?"-":pv.toFixed(1)}</td><td>${p.toFixed(0)}%</td><td style="text-align:left;white-space:normal;min-width:220px">${say(r,v,p)}</td></tr>`;}
+  $("#tpuSigTbl").innerHTML=h+"</tbody>";
+}
+
+// ④ 한·미 동일조건 비교
+function drawTpuCmp(){
+  const n=tpu.mat,[i0,i1]=tpuCmpRangeGet();
+  const K=TPU.KR.a("TP",n),U=BYNAME[`미국 ACM동일조건 기간프리미엄 ${n}Y`],O=TPU.US.a("TP",n);
+  const bp=s=>s?s.v.map(v=>v==null?null:+(v*100).toFixed(1)):null;
+  const ls=[];
+  if(K)ls.push({label:`한국 ${n}Y`,color:PAL[0],x:TS,y:bp(K),width:2});
+  if(U)ls.push({label:`미국 ${n}Y (동일조건)`,color:PAL[1],x:TS,y:bp(U),width:2});
+  if(O)ls.push({label:`미국 ${n}Y (뉴욕연준 공식)`,color:PAL[8],x:TS,y:bp(O),width:1.2,dash:[4,3]});
+  tsChart("tpuCmpChart",ls,{unit:"bp",zero:true,height:320,init:[TS[i0],TS[i1]]});
+  const st=[];const avg=s=>{let a=0,c=0;for(let i=T13;i<N;i++)if(s.v[i]!=null){a+=s.v[i];c++;}return c?a/c*100:null;};
+  for(const [lab,s] of [["한국",K],["미국 동일조건",U],["미국 공식",O]]){if(!s)continue;const [v,i]=lastVal(s.v);st.push([`${lab} 현재 (${DATES[i].slice(5)})`,(v*100).toFixed(0)+"bp"]);}
+  if(K&&U){const [k]=lastVal(K.v),[u]=lastVal(U.v);st.push(["한국 − 미국(동일조건)",fbp((k-u)*100)+"bp"]);st.push(["2013년 이후 평균 차이",fbp(avg(K)-avg(U))+"bp"]);}
+  $("#tpuCmpStat").innerHTML=st.map(([k,v])=>`<div><span>${k}</span><b>${v}</b></div>`).join("");
+}
+// 한눈에 보기: 한국 3·10Y, 미국 2·10Y 를 WTD·MTD·QTD·YTD 로 분해
+const TPU_ALL=[["한국","KR",3],["한국","KR",10],["미국","US",2],["미국","US",10]],TPU_P=["WTD","MTD","QTD","YTD"];
+function leadOf(rn,tp){if(rn==null||tp==null)return"-";const A=Math.abs(rn),B=Math.abs(tp);
+  return A+B<2?'<span class="hint">미미</span>':B>A*1.5?'<b style="color:var(--amber)">프리미엄</b>':A>B*1.5?"<b>정책기대</b>":"혼합";}
+function drawTpuAll(){
+  let h=`<thead><tr><th>구분</th><th>항목</th><th>현재</th>${TPU_P.map(p=>`<th>${p}</th>`).join("")}</tr></thead><tbody>`;
+  for(const [lab,c,n] of TPU_ALL){const C=TPU[c],M=C.mkt(n),R=C.a("RN",n),T=C.a("TP",n);if(!T)continue;
+    const i=lastIdx(T),js=TPU_P.map(p=>shiftIdx(i,p));
+    const d=(s,j)=>{if(!s||j<0)return null;const a=valAt(s,i),b=valAt(s,j);return a==null||b==null?null:(a-b)*100;};
+    const td=v=>`<td class="${cls(v)}">${fbp(v)}</td>`;
+    const pct=pctOf(T.v.map(v=>v==null?null:v*100),valAt(T,i)*100);
+    const head=`<td rowspan="4" style="vertical-align:top"><b>${lab} ${n}Y</b><div class="hint">기준 ${DATES[i].slice(2)}</div></td>`;
+    h+=`<tr class="sep">${head}<td style="text-align:left;position:static">실제 금리</td><td>${M?f3(valAt(M,i))+"%":"-"}</td>${js.map(j=>td(d(M,j))).join("")}</tr>`;
+    h+=`<tr><td style="text-align:left;position:static">정책기대 (위험중립)</td><td>${f3(valAt(R,i))}%</td>${js.map(j=>td(d(R,j))).join("")}</tr>`;
+    h+=`<tr><td style="text-align:left;position:static">기간프리미엄</td><td><b>${(valAt(T,i)*100).toFixed(1)}bp</b> <span class="hint">상위 ${(100-pct).toFixed(0)}%</span></td>${js.map(j=>td(d(T,j))).join("")}</tr>`;
+    h+=`<tr><td class="hint" style="text-align:left;position:static">주도 요인</td><td></td>${js.map(j=>`<td>${leadOf(d(R,j),d(T,j))}</td>`).join("")}</tr>`;}
+  $("#tpuAllTbl").innerHTML=h+"</tbody>";
+}
+renders.tpu=()=>{
+  $$("#tpuCty button").forEach(b=>b.classList.toggle("on",b.dataset.c===tpu.cty));$("#tpuMat").value=tpu.mat;
+  const all=tpu.cty==="ALL";
+  $("#tpuAllPanel").style.display=all?"":"none";$$(".tpuOne").forEach(x=>x.style.display=all?"none":"");$("#tpuMatWrap").style.display=all?"none":"";
+  if(!TPU.KR.a("TP",10)&&!TPU.US.a("TP",10)){$("#tpuAllTbl").innerHTML='<tr><td class="hint">ACM 데이터가 없습니다. 업데이트.bat 을 실행하세요.</td></tr>';return;}
+  if(all)drawTpuAll();else{drawTpuDec();drawTpuVal();drawTpuSig();}
+  drawTpuCmp();
+};
+
+/* ---------- 국채선물: 수정가 · 이동평균(CTA 국면) · 외국인 순매수 ---------- */
+let kf=store.get("kf",{prod:"3Y",ma:20});
+$("#kfProd").onclick=e=>{const b=e.target.closest("button");if(!b)return;kf.prod=b.dataset.p;store.set("kf",kf);renders.kfut();};
+$("#kfMa").onchange=()=>{const v=Math.round(+$("#kfMa").value);if(v>=5&&v<=120){kf.ma=v;store.set("kf",kf);renders.kfut();}};
+const kfRangeGet=rangeBar($("#kfRange"),"kf","1Y",()=>drawKfCharts());
+function kfData(){
+  const g=`국채선물${kf.prod}`,P=BYNAME[`${g} 수정가`];if(!P)return null;
+  const get=n=>BYNAME[`${g} ${n}`];const F=get("외국인순매수"),I=get("기관순매수"),O=get("미결제약정"),R=get("현재가");
+  const ix=[];for(let i=0;i<N;i++)if(P.v[i]!=null)ix.push(i);
+  const p=ix.map(i=>P.v[i]),f=ix.map(i=>F?F.v[i]||0:0),ins=ix.map(i=>I?I.v[i]||0:0),oi=ix.map(i=>O?O.v[i]:null),raw=ix.map(i=>R?R.v[i]:null);
+  const n=kf.ma,m=p.map((_,k)=>{if(k<n-1)return null;let s=0;for(let j=k-n+1;j<=k;j++)s+=p[j];return s/n;});
+  const above=p.map((v,k)=>m[k]==null?null:v>m[k]);
+  const cross=[];for(let k=1;k<p.length;k++)if(above[k]!=null&&above[k-1]!=null&&above[k]!==above[k-1])cross.push(k);
+  return {ix,p,f,ins,oi,raw,m,above,cross};
+}
+const kfSum=(a,k0,k1)=>{let s=0;for(let k=Math.max(0,k0);k<=Math.min(a.length-1,k1);k++)s+=a[k];return s;};
+const kfCorr=(x,y)=>{const n=x.length;if(n<10)return null;const mx=x.reduce((a,b)=>a+b,0)/n,my=y.reduce((a,b)=>a+b,0)/n;let c=0,vx=0,vy=0;for(let i=0;i<n;i++){c+=(x[i]-mx)*(y[i]-my);vx+=(x[i]-mx)**2;vy+=(y[i]-my)**2;}return vx&&vy?c/Math.sqrt(vx*vy):null;};
+function drawKfCards(D){
+  const L=D.p.length-1,i=D.ix[L],t=v=>(v*100).toFixed(1);
+  let s=L;while(s>0&&D.above[s-1]===D.above[L])s--;const days=L-s+1;
+  const gap=(D.p[L]-D.m[L])*100,f5=kfSum(D.f,L-4,L),f20=kfSum(D.f,L-19,L),doi=D.oi[L]!=null&&D.oi[L-5]!=null?D.oi[L]-D.oi[L-5]:null;
+  const card=(k,v,c="",sub="")=>`<div class="card"><div class="k">${k}</div><div class="v">${v}</div><div class="c ${c}">${sub}</div></div>`;
+  $("#kfCards").innerHTML=
+    card("수정가",D.p[L].toFixed(2),"",`현재가 ${D.raw[L]!=null?D.raw[L].toFixed(2):"-"} · ${DATES[i].slice(5)}`)+
+    card(`${kf.ma}일선`,D.m[L].toFixed(2),cls(gap),`이격 ${gap>0?"+":""}${gap.toFixed(1)}틱`)+
+    card("CTA 국면",`<span style="color:${D.above[L]?"var(--up)":"var(--down)"}">${D.above[L]?"이평 위":"이평 아래"}</span>`,"",`${days}일째 · 돌파일 ${DATES[D.ix[s]].slice(5)}`)+
+    card("외국인 5일 누적",Math.round(f5).toLocaleString(),cls(f5),"계약")+
+    card("외국인 20일 누적",Math.round(f20).toLocaleString(),cls(f20),"계약")+
+    `<div class="card" id="kfPerCard"></div>`+
+    card("미결제약정 5일 변화",doi==null?"-":Math.round(doi).toLocaleString(),cls(doi),D.oi[L]!=null?`잔고 ${Math.round(D.oi[L]).toLocaleString()}`:"");
+}
+function drawKfCharts(){
+  const D=kfData();if(!D)return;const [i0,i1]=kfRangeGet();
+  const G=a=>{const v=new Array(N).fill(null);D.ix.forEach((i,k)=>v[i]=a[k]);return v;};
+  // 국면 배경
+  const regions=[];let st=null;
+  for(let k=0;k<D.p.length;k++){if(D.above[k]==null)continue;if(st==null||D.above[k]!==D.above[st]){if(st!=null)regions.push([TS[D.ix[st]],TS[D.ix[k]],D.above[st]?"rgba(22,163,74,.10)":"rgba(220,38,38,.08)"]);st=k;}}
+  if(st!=null)regions.push([TS[D.ix[st]],TS[D.ix[D.p.length-1]]+86400,D.above[st]?"rgba(22,163,74,.10)":"rgba(220,38,38,.08)"]);
+  $("#kfTitle").textContent=`${kf.prod==="3Y"?"3년":"10년"} 국채선물 수정가 · ${kf.ma}일선 · CTA 국면`;
+  tsChart("kfPrice",[{label:"수정가",color:PAL[1],x:TS,y:G(D.p),width:1.8},{label:`${kf.ma}일선`,color:PAL[0],x:TS,y:G(D.m),width:1.6,dash:[6,4]}],
+    {height:360,init:[TS[i0],TS[i1]],sync:"kf",regions,ysize:70,padR:74});
+  const pos=D.f.map(v=>v>0?v:null),neg=D.f.map(v=>v<0?v:null),c20=D.f.map((_,k)=>k<19?null:kfSum(D.f,k-19,k));
+  // 기간 누적: 기간 버튼(또는 날짜)으로 고른 시작일부터 누적 — 기간을 바꾸면 다시 0부터
+  let kS=D.ix.findIndex(i=>i>=i0);if(kS<0)kS=0;let kE=D.ix.length-1;while(kE>0&&D.ix[kE]>i1)kE--;
+  let acc=0;const cP=D.f.map((v,k)=>k<kS||k>kE?null:(acc+=v));
+  let accI=0;D.ins.forEach((v,k)=>{if(k>=kS&&k<=kE)accI+=v;});
+  const pc=$("#kfPerCard");if(pc)pc.innerHTML=`<div class="k">외국인 기간 누적</div><div class="v ${cls(acc)}">${Math.round(acc).toLocaleString()}</div><div class="c hint">${DATES[D.ix[kS]].slice(2)}~${DATES[D.ix[kE]].slice(2)} · 기관 ${Math.round(accI).toLocaleString()}</div>`;
+  tsChart("kfFlow",[{label:"외국인 순매수(+)",color:css("--up"),x:TS,y:G(pos),bars:true},{label:"외국인 순매도(−)",color:css("--down"),x:TS,y:G(neg),bars:true},
+    {label:"20일 누적 (우)",color:PAL[0],x:TS,y:G(c20),width:1.6,y2:true},
+    {label:"기간 누적 (우)",color:PAL[5],x:TS,y:G(cP),width:2,y2:true}],{unit:"계약",y2unit:"계약",zero:true,height:240,init:[TS[i0],TS[i1]],sync:"kf",ysize:70});
+  // 60일 이동 상관 (일별 가격변화 vs 외국인 순매수)
+  const rc=D.p.map((_,k)=>{if(k<61)return null;const x=[],y=[];for(let j=k-59;j<=k;j++){x.push((D.p[j]-D.p[j-1])*100);y.push(D.f[j]);}const r=kfCorr(x,y);return r==null?null:+r.toFixed(3);});
+  tsChart("kfCorr",[{label:"60일 이동 상관 (가격변화 vs 외국인)",color:PAL[5],x:TS,y:G(rc),width:1.6}],{height:200,zero:true,init:[TS[i0],TS[i1]],sync:"kf",ysize:70,padR:74});
+  drawKfRel(D,i0,i1);
+}
+function kfStats(D,k0,k1){
+  const dp=[],ff=[],fn=[],dn=[],fi=[],ii=[];
+  for(let k=Math.max(1,k0);k<=k1;k++){dp.push((D.p[k]-D.p[k-1])*100);ff.push(D.f[k]);fi.push(D.f[k]);ii.push(D.ins[k]);if(k<k1){fn.push(D.f[k]);dn.push((D.p[k+1]-D.p[k])*100);}}
+  let fa=0,na=0,fb=0,nb=0,pnl=0,win=0,cnt=0;
+  for(let k=Math.max(1,k0);k<=k1;k++){if(D.above[k]==null)continue;if(D.above[k]){fa+=D.f[k];na++;}else{fb+=D.f[k];nb++;}
+    if(D.above[k-1]!=null){const r=(D.p[k]-D.p[k-1])*100*(D.above[k-1]?1:-1);pnl+=r;cnt++;if(r>0)win++;}}
+  const cr=D.cross.filter(k=>k>=k0&&k<=k1);
+  const ev=(up,pre)=>{const a=cr.filter(k=>D.above[k]===up).map(k=>pre?kfSum(D.f,k-5,k-1):kfSum(D.f,k,k+4));return a.length?a.reduce((x,y)=>x+y,0)/a.length:null;};
+  return {same:kfCorr(dp,ff),next:kfCorr(fn,dn),fi:kfCorr(fi,ii),fa:na?fa/na:null,fb:nb?fb/nb:null,
+    upPre:ev(true,true),upPost:ev(true,false),dnPre:ev(false,true),dnPost:ev(false,false),nUp:cr.filter(k=>D.above[k]).length,nDn:cr.filter(k=>!D.above[k]).length,
+    pnl,hold:(D.p[k1]-D.p[k0])*100,win:cnt?win/cnt*100:null};
+}
+function drawKfRel(D,i0,i1){
+  let k0=D.ix.findIndex(i=>i>=i0);if(k0<0)k0=0;let k1=D.ix.length-1;while(k1>0&&D.ix[k1]>i1)k1--;
+  const A=kfStats(D,kf.ma,D.p.length-1),B=kfStats(D,Math.max(k0,kf.ma),k1);
+  $("#kfRelNote").textContent=`전체 ${DATES[D.ix[0]].slice(0,4)}~ / 선택 ${DATES[D.ix[k0]].slice(2)}~${DATES[D.ix[k1]].slice(2)}`;
+  const r=v=>v==null?"-":(v>0?"+":"")+v.toFixed(2),c=v=>v==null?"-":Math.round(v).toLocaleString(),t=v=>v==null?"-":(v>0?"+":"")+v.toFixed(0)+"틱";
+  const rows=[["같은 날: 가격변화 vs 외국인 순매수 (상관)",A.same,B.same,r],["예측: 오늘 외국인 → 내일 가격변화 (상관)",A.next,B.next,r],["외국인 vs 기관 순매수 (상관)",A.fi,B.fi,r],
+    [`외국인 일평균: ${kf.ma}일선 위`,A.fa,B.fa,c],[`외국인 일평균: ${kf.ma}일선 아래`,A.fb,B.fb,c],
+    ["상향돌파 직전 5일 외국인 (평균)",A.upPre,B.upPre,c],["상향돌파 직후 5일 외국인 (평균)",A.upPost,B.upPost,c],
+    ["하향돌파 직전 5일 외국인 (평균)",A.dnPre,B.dnPre,c],["하향돌파 직후 5일 외국인 (평균)",A.dnPost,B.dnPost,c],
+    ["돌파 횟수 (상향/하향)",`${A.nUp}/${A.nDn}`,`${B.nUp}/${B.nDn}`,x=>x],
+    [`${kf.ma}일선 추종 누적 (위=매수, 아래=매도)`,A.pnl,B.pnl,t],["단순 보유 누적",A.hold,B.hold,t],["추종 일별 승률",A.win,B.win,v=>v==null?"-":v.toFixed(0)+"%"]];
+  $("#kfRel").innerHTML=`<thead><tr><th>항목</th><th>전체</th><th>선택 기간</th></tr></thead><tbody>`+
+    rows.map(([k,a,b,fmt])=>`<tr><td style="white-space:normal">${k}</td><td class="${typeof a==="number"?cls(a):""}">${fmt(a)}</td><td class="${typeof b==="number"?cls(b):""}">${fmt(b)}</td></tr>`).join("")+"</tbody>";
+  // 돌파 이벤트 표
+  const ev=D.cross.slice(-25).reverse();
+  const fw=(k,h)=>k+h<D.p.length?(D.p[k+h]-D.p[k])*100:null;
+  $("#kfEv").innerHTML=`<thead><tr><th>날짜</th><th>방향</th><th>수정가</th><th>5일 후</th><th>10일 후</th><th>20일 후</th><th>외국인 직전5일</th><th>직후5일</th></tr></thead><tbody>`+
+    ev.map(k=>{const up=D.above[k];const td=v=>`<td class="${cls(v)}">${v==null?"-":(v>0?"+":"")+v.toFixed(0)}</td>`;
+      return `<tr><td>${DATES[D.ix[k]]}</td><td><b style="color:${up?"var(--up)":"var(--down)"}">${up?"▲ 상향":"▼ 하향"}</b></td><td>${D.p[k].toFixed(2)}</td>${td(fw(k,5))}${td(fw(k,10))}${td(fw(k,20))}`+
+        `<td class="${cls(kfSum(D.f,k-5,k-1))}">${Math.round(kfSum(D.f,k-5,k-1)).toLocaleString()}</td><td class="${cls(k+4<D.p.length?kfSum(D.f,k,k+4):null)}">${k+4<D.p.length?Math.round(kfSum(D.f,k,k+4)).toLocaleString():"-"}</td></tr>`;}).join("")+"</tbody>";
+}
+renders.kfut=()=>{
+  $$("#kfProd button").forEach(b=>b.classList.toggle("on",b.dataset.p===kf.prod));$("#kfMa").value=kf.ma;
+  const D=kfData();if(!D){$("#kfCards").innerHTML='<p class="hint">국채선물 데이터가 없습니다. 플랫폼 폴더에 국채선물.xlsx 를 두고 업데이트.bat 을 실행하세요.</p>';return;}
+  drawKfCards(D);drawKfCharts();
+};
+
+renders.dash();
+}
+
+/* ---------- 데이터 로딩 ----------
+   1) 같은 폴더의 data.js (PC 에서 바로 열 때)
+   2) 이 브라우저에 저장해 둔 데이터 (IndexedDB) — 웹 배포판에서 다음 접속부터
+   3) 둘 다 없으면 'data.js 불러오기' 화면. 파일은 이 브라우저 안에서만 읽고 어디로도 전송하지 않음 */
+const YB_IDB={
+  open(){return new Promise((res,rej)=>{const r=indexedDB.open("yieldbox",1);r.onupgradeneeded=()=>r.result.createObjectStore("kv");r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});},
+  async get(k){const db=await this.open();return new Promise((res,rej)=>{const q=db.transaction("kv").objectStore("kv").get(k);q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error);});},
+  async set(k,v){const db=await this.open();return new Promise((res,rej)=>{const q=db.transaction("kv","readwrite").objectStore("kv").put(v,k);q.onsuccess=()=>res();q.onerror=()=>rej(q.error);});},
+  async del(k){const db=await this.open();return new Promise((res,rej)=>{const q=db.transaction("kv","readwrite").objectStore("kv").delete(k);q.onsuccess=()=>res();q.onerror=()=>rej(q.error);});}
+};
+function ybParse(text){
+  const t=text.trim(),j=t.startsWith("window.DB")?t.slice(t.indexOf("=")+1).replace(/;\s*$/,""):t;
+  const db=JSON.parse(j);if(!db||!db.dates||!db.series)throw new Error("Yield Box 데이터 형식이 아닙니다");return db;
+}
+async function ybLoadFile(file){
+  const text=await file.text();const db=ybParse(text);
+  try{await YB_IDB.set("data",text);}catch(e){console.warn("브라우저 저장 실패",e);}
+  return db;
+}
+function ybLoader(msg){
+  const err=document.getElementById("err"),main=document.querySelector("main");main.style.display="none";err.style.display="block";
+  err.innerHTML=`<h2 style="font-size:16px;margin:0 0 8px">데이터 파일을 불러오세요</h2>
+    <p class="hint" style="margin:0 0 14px">이 페이지에는 시세 데이터가 들어 있지 않습니다. PC의 Yield Box 폴더에 있는 <b>data.js</b> 를 선택하거나 이 영역에 끌어다 놓으세요.<br>
+    파일은 <b>이 브라우저 안에서만</b> 읽고 저장하며(IndexedDB), 서버나 다른 곳으로 전송되지 않습니다. 한 번 불러오면 이 브라우저에서는 다음부터 바로 열립니다.</p>
+    <div id="ybDrop" style="border:2px dashed var(--line);padding:36px;border-radius:4px;cursor:pointer">
+      <button class="btn primary" id="ybPick">data.js 선택</button><div class="hint" style="margin-top:8px">또는 파일을 여기로 끌어다 놓기</div></div>
+    <p class="hint" id="ybMsg" style="margin:10px 0 0;color:var(--up)">${msg||""}</p>`;
+  const inp=document.getElementById("dataFile");
+  const go=async f=>{try{window.DB=await ybLoadFile(f);window.YB_FROM_IDB=true;err.style.display="none";main.style.display="";YB_MAIN();ybShowDataBtn();}
+    catch(e){document.getElementById("ybMsg").textContent="불러오기 실패: "+e.message;}};
+  document.getElementById("ybPick").onclick=e=>{e.stopPropagation();inp.click();};
+  document.getElementById("ybDrop").onclick=()=>inp.click();
+  inp.onchange=()=>{if(inp.files[0])go(inp.files[0]);inp.value="";};
+  const dz=document.getElementById("ybDrop");
+  dz.ondragover=e=>{e.preventDefault();dz.style.borderColor="var(--amber)";};
+  dz.ondragleave=()=>{dz.style.borderColor="var(--line)";};
+  dz.ondrop=e=>{e.preventDefault();dz.style.borderColor="var(--line)";if(e.dataTransfer.files[0])go(e.dataTransfer.files[0]);};
+}
+// 브라우저 저장본으로 열었을 때: 상단 '데이터 불러오기'로 새 data.js 로 교체
+function ybShowDataBtn(){
+  const b=document.getElementById("dataBtn"),inp=document.getElementById("dataFile");b.style.display="";b.textContent="데이터 교체";
+  b.onclick=()=>inp.click();
+  inp.onchange=async()=>{const f=inp.files[0];inp.value="";if(!f)return;try{await ybLoadFile(f);location.reload();}catch(e){alert("불러오기 실패: "+e.message);}};
+}
+(async()=>{
+  if(window.DB){YB_MAIN();return;}
+  try{const t=await YB_IDB.get("data");if(t){window.DB=ybParse(t);window.YB_FROM_IDB=true;YB_MAIN();ybShowDataBtn();return;}}catch(e){}
+  ybLoader();
+})();
+</script>
+</body>
+</html>
