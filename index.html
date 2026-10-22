@@ -167,6 +167,17 @@ tr:hover td{background:var(--hover)}
 .cvpick .chips{margin:0;gap:5px}
 .cvpick .chip{font:600 12px var(--mono);padding:3px 9px;min-width:44px;text-align:center;background:var(--panel);transition:background .1s}
 .cvpick .chip.on{color:#fff}
+.cmpgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (max-width:1000px){.cmpgrid{grid-template-columns:1fr}}
+.cmpgrid .smcard .u-legend{display:none}
+.cmpmeta{display:flex;flex-wrap:wrap;gap:4px 14px;font:12px var(--mono);margin:4px 0 2px}
+.cmpmeta i{display:inline-block;width:14px;height:3px;border-radius:2px;margin-right:5px;vertical-align:middle}
+.cmpmeta .gap{color:var(--muted)}
+.rtt td,.rtt th{text-align:right;white-space:nowrap}
+.rtt td:first-child,.rtt th:first-child{text-align:left}
+.rtt tr.gsep td{border-top:2px solid var(--line)}
+.rtt td.ck{cursor:pointer}
+.rtt td.ck:hover{outline:1px solid var(--amber);outline-offset:-1px}
 #err{display:none;padding:40px;text-align:center}
 </style>
 </head>
@@ -175,15 +186,14 @@ tr:hover td{background:var(--hover)}
   <h1>Yield Box</h1>
   <nav id="nav">
     <button data-tab="dash" class="on">대시보드</button>
+    <button data-tab="matrix">매트릭스</button>
     <button data-tab="ts">시계열</button>
     <button data-tab="spread">스프레드</button>
     <button data-tab="curve">커브</button>
     <button data-tab="ust">기간프리미엄</button>
-    <button data-tab="tpu">TP 활용</button>
     <button data-tab="fwd">선도금리</button>
     <button data-tab="kfut">국채선물</button>
     <button data-tab="roll">롤다운</button>
-    <button data-tab="matrix">매트릭스</button>
     <button data-tab="table">데이터</button>
   </nav>
   <div class="spacer"></div>
@@ -265,14 +275,17 @@ tr:hover td{background:var(--hover)}
     <div id="spGrid" style="display:none">
       <div class="panel">
         <div class="row">
-          <div class="seg" id="gdMode"><button data-m="group">종류 선택 → 테너별</button><button data-m="tenor">테너 선택 → 종류별</button></div>
+          <div class="seg" id="gdMode"><button data-m="group">종류 선택 → 테너별</button><button data-m="tenor">테너 선택 → 종류별</button><button data-m="cmp">섹터 비교</button></div>
           <span id="gdPickWrap"><select id="gdGroup"></select><select id="gdTenor"></select></span>
-          <span><label class="lbl">통계 기간</label></span><div id="gdRange"></div>
+          <span id="gdRangeWrap" class="row" style="gap:6px"><label class="lbl">통계 기간</label><div id="gdRange"></div></span>
+          <span id="gcRangeWrap" class="row" style="gap:6px;display:none"><label class="lbl">기간</label><div id="gcRange"></div></span>
         </div>
         <div class="chips" id="gdChips" style="margin-top:10px"></div>
-        <p class="hint" style="margin:8px 0 0">모두 국고 같은 테너 대비 스프레드(bp)입니다. 배경 띠 = 통계 기간(기본 전체) 평균 ±1σ·±2σ, 상세 탭의 통계 제외 기간 반영. 차트는 최근 5개월부터 보이며, 왼쪽으로 드래그하면 더 과거까지 볼 수 있습니다. 한 차트를 드래그하면 모든 차트가 함께 확대·축소됩니다.</p>
+        <p class="hint" id="gcHint" style="margin:8px 0 0;display:none">섹터 비교: 같은 테너의 국고 대비 스프레드(bp)를 섹터끼리 겹쳐 봅니다. 위에서 테너를 고르면 모든 카드가 함께 바뀌고, 차트를 드래그하면 함께 확대·축소됩니다.</p>
+        <p class="hint" id="gdHint" style="margin:8px 0 0">모두 국고 같은 테너 대비 스프레드(bp)입니다. 배경 띠 = 통계 기간(기본 전체) 평균 ±1σ·±2σ, 상세 탭의 통계 제외 기간 반영. 차트는 최근 5개월부터 보이며, 왼쪽으로 드래그하면 더 과거까지 볼 수 있습니다. 한 차트를 드래그하면 모든 차트가 함께 확대·축소됩니다.</p>
       </div>
       <div class="smgrid" id="gdCards"></div>
+      <div class="cmpgrid" id="gdCmpCards" style="display:none"></div>
     </div>
     <div id="spBs" style="display:none">
       <div class="panel">
@@ -320,6 +333,8 @@ tr:hover td{background:var(--hover)}
 
   <!-- 미국채 -->
   <section class="tab" id="tab-ust">
+    <div class="seg" id="ustSub" style="margin-bottom:12px"><button data-v="main">기간프리미엄</button><button data-v="tpu">TP 활용</button></div>
+    <div id="ustMain">
     <div class="row" style="margin-bottom:10px"><div class="seg" id="usCty"><button data-c="US">미국 (뉴욕연준 ACM)</button><button data-c="KR">한국 (국고 ACM 자체추정)</button></div>
       <span class="hint" id="usCtyNote"></span></div>
     <div class="cards" id="usCards"></div>
@@ -348,14 +363,22 @@ tr:hover td{background:var(--hover)}
       </div>
     </div>
     <div class="panel">
+      <div class="row" style="justify-content:space-between">
+        <h2>기대 단기금리 경로 — 모형 vs 시장</h2>
+        <div class="row"><span><label class="lbl">기준일</label><input type="date" id="pathDate"></span>
+          <label class="checks"><label><input type="checkbox" id="pathCmp" checked> 1개월 전 같이 보기</label></label></div>
+      </div>
+      <p class="hint" id="pathNote" style="margin:0 0 6px"></p>
+      <div class="chart" id="pathChart" style="min-height:340px"></div>
+      <div class="tblwrap" style="max-height:none;margin-top:10px"><table id="pathTbl"></table></div>
+    </div>
+    <div class="panel">
       <div class="row" style="justify-content:space-between"><h2>한·미 기간프리미엄 비교 (bp)</h2>
         <div class="row"><span><label class="lbl">만기</label><select id="usCmpMat"></select></span><div id="usCmpRange"></div></div></div>
       <div class="chart" id="usCmpChart"></div>
     </div>
-  </section>
-
-  <!-- TP 활용 -->
-  <section class="tab" id="tab-tpu">
+    </div>
+    <div id="ustTpu" style="display:none">
     <div class="row" style="margin-bottom:10px">
       <div class="seg" id="tpuCty"><button data-c="ALL">한눈에 보기</button><button data-c="KR">한국</button><button data-c="US">미국</button></div>
       <span id="tpuMatWrap"><label class="lbl">만기</label><select id="tpuMat"></select></span>
@@ -392,6 +415,7 @@ tr:hover td{background:var(--hover)}
       <div class="stat" id="tpuCmpStat"></div>
       <div class="chart" id="tpuCmpChart" style="min-height:320px;margin-top:10px"></div>
       <p class="hint" style="margin:6px 0 0">'미국 동일조건'은 연준 무이표 금리로 국고와 똑같은 설정(팩터 3개, 2001년~ 월말)으로 추정한 값입니다. 뉴욕연준 공식값(1961년~, 팩터 5개)과 수준을 직접 비교하면 결론이 뒤집힐 수 있어, 국가 비교는 동일조건 값으로 보세요.</p>
+    </div>
     </div>
   </section>
 
@@ -460,8 +484,9 @@ tr:hover td{background:var(--hover)}
     </div>
     <div class="panel">
       <div class="row" style="justify-content:space-between">
-        <h2>내재 3M 금리 경로 (3M 선도 체인)</h2>
-        <div class="row"><span><label class="lbl">기준일</label><input type="date" id="fwDate"></span><span class="checks" id="fwCmp"></span></div>
+        <h2>내재 3M 금리 경로 — 시장 선도 vs 모형 기대</h2>
+        <div class="row"><span><label class="lbl">기준일</label><input type="date" id="fwDate"></span><span class="checks" id="fwCmp"></span>
+          <label class="checks"><label><input type="checkbox" id="fwModel"> 모형 기대(국고 ACM) 같이 보기</label></label></div>
       </div>
       <p class="hint" id="fwPathNote" style="margin:0 0 8px"></p>
       <div class="chart" id="fwPath"></div>
@@ -471,6 +496,36 @@ tr:hover td{background:var(--hover)}
 
   <!-- 롤다운 -->
   <section class="tab" id="tab-roll">
+    <div class="seg" id="rdSub" style="margin-bottom:12px"><button data-v="calc">계산기</button><button data-v="tbl">섹터 롤 표</button></div>
+    <div id="rtView" style="display:none">
+    <div class="panel">
+      <div class="row" style="justify-content:space-between">
+        <h2>6M 롤마진 · 섹터 × 테너 (bp)</h2>
+        <div class="row">
+          <span><label class="lbl">기준일</label><input type="date" id="rtDate"></span>
+          <div class="seg" id="rtView1"></div>
+        </div>
+      </div>
+      <div class="row" style="margin-top:6px">
+        <span><label class="lbl">통계 시작</label><input type="date" id="rtSt"></span>
+        <label class="checks"><label><input type="checkbox" id="rtExOn"> 통계 제외 기간</label></label>
+        <span><input type="date" id="rtExA"> ~ <input type="date" id="rtExB"></span>
+      </div>
+      <div class="tblwrap" style="max-height:none;margin-top:10px"><table id="rtTblA" class="rtt"></table></div>
+      <p class="hint" style="margin:8px 0 0">롤마진 = y(T) − y(T−6M). 9M 은 9M−3M, 4Y·5Y 는 3.5Y·4.5Y 를 양옆 만기 직선보간(4Y* = y4 − (y3+y4)/2).
+        평균·σ·백분위는 통계 시작일 이후, 제외 기간을 뺀 영업일로 계산합니다 (σ 는 모표준편차, z = (현재 − 3Y 평균)/3Y σ). 셀을 누르면 계산기의 BEP 로 이동합니다.</p>
+    </div>
+    <div class="panel">
+      <div class="row" style="justify-content:space-between">
+        <h2 id="rtBTitle">6M 보유수익 분해 (%)</h2>
+        <div class="seg" id="rtView2"></div>
+      </div>
+      <div class="tblwrap" style="max-height:none;margin-top:10px"><table id="rtTblB" class="rtt"></table></div>
+      <p class="hint" style="margin:8px 0 0">커브 불변 가정, 6개월 보유. 국고 캐리 = y국고(T)×0.5, 국고 롤 = D×(y국고(T) − y국고(T−0.5)), D = (T−0.5)/(1+y(T−0.5)).
+        SP 캐리 = (y크레딧(T) − y국고(T))×0.5, SP 롤 = D크레딧×Δy크레딧 − D국고×Δy국고. 크레딧 초과 = SP 캐리 + SP 롤, 총 = 국고 소계 + 크레딧 초과.</p>
+    </div>
+    </div>
+    <div id="rdCalcView">
     <div class="panel">
       <div class="row">
         <span><label class="lbl">매수일</label><input type="date" id="rdA"></span>
@@ -502,6 +557,7 @@ tr:hover td{background:var(--hover)}
       <p class="hint" style="margin:8px 0 0">평가일 커브에서 만기 T 를 매수(YTM y₀)해 N개월 보유 후 잔존 T₂ 로 매도한다고 볼 때,
         이자(캐리)와 롤다운 이익을 매도 시 가격손실이 모두 상쇄하는 T₂ 금리가 BEP입니다.
         BEP = y₀ + (y₀ − 조달금리) × Δ / T₂ (가격민감도 ≈ T₂ 근사). 커브 불변 시 매도금리는 y(T₂) 이고, BEP − y(T₂) 만큼이 금리 상승 여유입니다.</p>
+    </div>
     </div>
   </section>
 
@@ -611,11 +667,13 @@ function rangeBar(el,key,def,onChange){
   const [a,b]=el.querySelectorAll("input");
   function calc(){
     if(st.p){b.value=DATES[LAST];a.value=st.p==="전체"?DATES[0]:DATES[Math.max(0,shiftIdx(LAST,st.p))];}
-    else{a.value=st.a;b.value=st.b;}
+    // 직접 지정 기간도 끝날짜가 '최신일'이었으면 데이터가 갱신될 때 최신일까지 따라감
+    // (예전 저장값은 끝날짜가 최신일에서 10영업일 이내면 최신일로 본 것으로 간주)
+    else{const latest=st.toLatest!=null?st.toLatest:idxOnOrBefore(st.b)>=LAST-10;a.value=st.a;b.value=latest?DATES[LAST]:st.b;}
     el.querySelectorAll(".seg button").forEach(x=>x.classList.toggle("on",x.dataset.p===st.p));
   }
   el.querySelector(".seg").onclick=e=>{const x=e.target.closest("button");if(!x)return;st={p:x.dataset.p};store.set("range:"+key,st);calc();onChange();};
-  const custom=()=>{if(!a.value||!b.value)return;st={a:a.value,b:b.value};store.set("range:"+key,st);calc();onChange();};
+  const custom=()=>{if(!a.value||!b.value)return;st={a:a.value,b:b.value,toLatest:idxOnOrBefore(b.value)>=LAST};store.set("range:"+key,st);calc();onChange();};
   a.onchange=custom;b.onchange=custom;calc();
   return ()=>{let i0=idxOnOrAfter(a.value),i1=idxOnOrBefore(b.value);if(i0>i1)[i0,i1]=[i1,i0];return [Math.max(0,i0),Math.min(LAST,i1)];};
 }
@@ -919,8 +977,105 @@ $("#gdCards").onclick=e=>{const b=e.target.closest("button[data-a]");if(!b)retur
 // 기간 바 = 통계(평균·σ) 기간, 기본 전체. 차트는 그 끝에서 최근 5개월만 먼저 보여 줌
 const gdRangeGet=rangeBar($("#gdRange"),"gdStat","전체",()=>drawGrid());
 let gdCount=0;
+// ---------- 크레딧 한눈에 › 섹터 비교: 같은 테너 스프레드를 섹터끼리 겹쳐 보기
+const CMP_RATINGS=["AA+","AA0","AA-","A+","A0","A-"];
+const cmpLab=g=>g.replace("기타금융채","캐피탈").replace("공사/공단채","공사").replace(/([가-힣])(A|B)/,"$1 $2");
+const cmpGroupName=(base,r)=>({"기타금융채":`기타금융채${r}`,"회사채":`회사채${r}`,"카드채":`카드채 ${r==="AA0"?"AA":r}`}[base]);
+if(!gd.cmpR)gd.cmpR="AA-";
+if(!gd.cmpSel)gd.cmpSel=["공사/공단채 AAA","은행채 AAA","회사채AA-","기타금융채AA-"];
+const CMP_COLORS=[PAL[1],PAL[6],PAL[2],PAL[0],PAL[5],PAL[3],PAL[7],PAL[9]];
+function cmpCards(){
+  return [
+    {id:"psb",title:"공사·은행·특은 (AAA)",lines:[["공사채","공사/공단채 AAA"],["은행채","은행채 AAA"],["특은(산금채)","산금채 AAA"]],gap:[1,0]},
+    {id:"fc",title:`여전채 vs 회사채 (${gd.cmpR})`,rating:true,lines:[["캐피탈",cmpGroupName("기타금융채",gd.cmpR)],["회사채",cmpGroupName("회사채",gd.cmpR)]],gap:[0,1]},
+    {id:"cu",title:"직접 고르기",custom:true,lines:gd.cmpSel.map(g=>[cmpLab(g),g])}
+  ];
+}
+const gcRangeGet=rangeBar($("#gcRange"),"gdCmp","1Y",()=>drawCmp());
+$("#gdCmpCards").addEventListener("click",e=>{
+  const r=e.target.closest("[data-rt]");if(r){gd.cmpR=r.dataset.rt;gdSave();drawCmp();return;}
+  const bp=e.target.closest("[data-bp]");if(bp){gd.barP=bp.dataset.bp;gdSave();drawCmp();return;}
+  const bs=e.target.closest("[data-bs]");if(bs){const g=bs.dataset.bs;gd.barSel=gd.barSel.includes(g)?gd.barSel.filter(x=>x!==g):gd.barSel.concat(g);gdSave();drawCmp();return;}
+  const c=e.target.closest("[data-cg]");if(c){const g=c.dataset.cg;gd.cmpSel=gd.cmpSel.includes(g)?gd.cmpSel.filter(x=>x!==g):gd.cmpSel.concat(g);if(!gd.cmpSel.length)gd.cmpSel=[g];gdSave();drawCmp();}
+});
+// 섹터별 스프레드 변동 막대: 지난 기간 vs 이번 기간 (예: 9월 변동 vs 10월 MTD)
+const BAR_DEF=["공사/공단채 AAA","은행채 AAA","카드채 AA+","기타금융채AA-","기타금융채A+","회사채AAA","회사채AA-","회사채A+"];
+if(!gd.barSel)gd.barSel=BAR_DEF.slice();if(!gd.barP)gd.barP="M";
+const barLab=g=>g.replace("공사/공단채","공사").replace("은행채","은행").replace("카드채","카드").replace("기타금융채","캐피탈").replace("회사채","회사")
+  .replace("산금채","산금").replace("중금채","중금").replace("통안증권","통안").replace(/([가-힣])(A|B)/,"$1 $2");
+function barCardHtml(){
+  const y=gd.tenor,avail=GD_GROUPS.filter(g=>g!=="미국채"&&(BYGROUP[g]||[]).some(s=>s.years===y));
+  return `<div class="smcard" style="grid-column:1/-1"><div class="hd"><span class="tt">섹터별 스프레드 변동 · ${tenorLabel(y)} (bp)</span>
+    <div class="seg">${[["W","주간"],["M","월간"],["Q","분기"]].map(([k,l])=>`<button data-bp="${k}" class="${gd.barP===k?"on":""}" style="padding:2px 9px;font-size:11px">${l}</button>`).join("")}</div></div>
+    <div class="chips" style="margin:4px 0">${avail.map(g=>`<span class="chip ${gd.barSel.includes(g)?"on":""}" data-bs="${g}" style="font-size:11px">${barLab(g)}</span>`).join("")}</div>
+    <div class="cmpmeta" id="barLeg"></div><canvas id="barCv" style="width:100%;height:300px;display:block"></canvas></div>`;
+}
+function drawBarCard(){
+  const cv=$("#barCv");if(!cv)return;
+  const y=gd.tenor,K=ktbOf(y);if(!K)return;
+  const ref=(BYGROUP["회사채AA-"]||[]).find(s=>s.years===y)||K;let i=LAST;while(i>0&&(ref.v[i]==null||K.v[i]==null))i--;
+  const P={W:"WTD",M:"MTD",Q:"QTD"}[gd.barP];const j1=shiftIdx(i,P),j2=j1>=0?shiftIdx(j1,P):-1;
+  const nm=d=>{const m=+d.slice(5,7);return gd.barP==="M"?`${m}월`:gd.barP==="Q"?`${Math.ceil(m/3)}분기`:"";};
+  const L1=gd.barP==="W"?`지난주 (${DATES[j2].slice(5)}→${DATES[j1].slice(5)})`:`${nm(DATES[j1])} 변동`;
+  const L2=gd.barP==="W"?`이번 주 (${DATES[i].slice(5)} 기준)`:`${nm(DATES[i])} 변동 (${DATES[i].slice(5).replace("-",".")} 기준)`;
+  const cats=gd.barSel.filter(g=>(BYGROUP[g]||[]).some(s=>s.years===y)).sort((a,b)=>BAR_DEF.indexOf(a)-BAR_DEF.indexOf(b)+(BAR_DEF.indexOf(a)<0?99:0)-(BAR_DEF.indexOf(b)<0?99:0));
+  const spAt=(g,k)=>{const s=(BYGROUP[g]||[]).find(x=>x.years===y);const a=s?valAt(s,k):null,b=valAt(K,k);return a==null||b==null?null:(a-b)*100;};
+  const v1=cats.map(g=>{const a=spAt(g,j1),b=spAt(g,j2);return a==null||b==null?null:+(a-b).toFixed(1);});
+  const v2=cats.map(g=>{const a=spAt(g,i),b=spAt(g,j1);return a==null||b==null?null:+(a-b).toFixed(1);});
+  const C1=PAL[1],C2=root.dataset.theme==="light"?"#b8bcc6":"#6b7280";
+  $("#barLeg").innerHTML=`<span><i style="background:${C1};height:10px;width:10px"></i>${L1}</span><span><i style="background:${C2};height:10px;width:10px"></i>${L2}</span>`;
+  const d=devicePixelRatio,W=cv.clientWidth,H=300;cv.width=W*d;cv.height=H*d;const c=cv.getContext("2d");c.scale(d,d);c.clearRect(0,0,W,H);
+  if(!cats.length){c.fillStyle=css("--muted");c.font="12px sans-serif";c.fillText("섹터를 고르세요",20,40);return;}
+  const all=[...v1,...v2].filter(v=>v!=null),mx=Math.max(0,...all),mn=Math.min(0,...all),rng=(mx-mn)||1;
+  const step=[0.5,1,2,5,10,20,50,100].find(s=>rng/s<=6)||200,top=Math.ceil((mx+rng*0.12)/step)*step,bot=Math.floor((mn-rng*0.12)/step)*step;
+  const L=44,R=10,T=14,B=44,pw=W-L-R,ph=H-T-B,Y=v=>T+(top-v)/(top-bot)*ph;
+  c.font="11px Consolas,monospace";c.textBaseline="middle";
+  for(let t=bot;t<=top+1e-9;t+=step){const yy=Y(t);c.strokeStyle=css("--grid");c.lineWidth=1;c.beginPath();c.moveTo(L,yy);c.lineTo(W-R,yy);c.stroke();c.fillStyle=css("--axis");c.textAlign="right";c.fillText((+t.toFixed(1)).toString(),L-6,yy);}
+  c.strokeStyle=css("--fg");c.globalAlpha=.6;c.beginPath();c.moveTo(L,Y(0));c.lineTo(W-R,Y(0));c.stroke();c.globalAlpha=1;
+  const gw=pw/cats.length,bw=Math.min(28,gw*0.32);
+  cats.forEach((g,k)=>{const cx=L+gw*(k+0.5);
+    [[v1[k],C1,-1],[v2[k],C2,1]].forEach(([v,col,side])=>{if(v==null)return;const x=cx+side*(bw/2+1)-bw/2,y0=Y(0),y1=Y(v);
+      c.fillStyle=col;c.fillRect(x,Math.min(y0,y1),bw,Math.max(1,Math.abs(y1-y0)));
+      c.fillStyle=v<0?"#dc2626":css("--fg");c.textAlign="center";c.font="600 11px Consolas,monospace";c.fillText(v.toFixed(1),x+bw/2,v>=0?y1-8:y1+9);});
+    const lab=barLab(g).split(" ");c.fillStyle=css("--fg");c.font="12px 'Malgun Gothic',sans-serif";c.textAlign="center";
+    c.fillText(lab[0],cx,H-B+16);if(lab[1]){c.fillStyle=css("--muted");c.fillText(lab.slice(1).join(" "),cx,H-B+31);}
+  });
+}
+let cmpCount=0;
+function drawCmp(){
+  const y=gd.tenor,K=ktbOf(y);const [i0,i1]=gcRangeGet();
+  const cards=cmpCards();
+  for(let k=cards.length;k<cmpCount;k++)if(plots["gc"+k]){plots["gc"+k].destroy();delete plots["gc"+k];}cmpCount=cards.length;
+  const sp=g=>{const s=(BYGROUP[g]||[]).find(x=>x.years===y);return s&&K?s.v.map((a,i)=>{const b=K.v[i];return a==null||b==null?null:+((a-b)*100).toFixed(2);}):null;};
+  const last=a=>{for(let i=i1;i>=0;i--)if(a[i]!=null)return [a[i],i];return [null,-1];};
+  const chg=(a,ci,p)=>{const j=shiftIdx(ci,p),v=j>=0?valAt({v:a},j):null;return v==null?null:a[ci]-v;};
+  $("#gdCmpCards").innerHTML=barCardHtml()+cards.map((c,k)=>{
+    let extra="";
+    if(c.rating)extra=`<div class="seg" style="margin:2px 0 4px">${CMP_RATINGS.map(r=>`<button data-rt="${r}" class="${r===gd.cmpR?"on":""}" style="padding:2px 8px;font-size:11px">${r}</button>`).join("")}</div>`;
+    if(c.custom)extra=`<div class="chips" style="margin:2px 0 4px">${GD_GROUPS.filter(g=>(BYGROUP[g]||[]).some(s=>s.years===y)).map(g=>`<span class="chip ${gd.cmpSel.includes(g)?"on":""}" data-cg="${g}" style="font-size:11px">${cmpLab(g)}</span>`).join("")}</div>`;
+    return `<div class="smcard"><div class="hd"><span class="tt">${c.title} · ${tenorLabel(y)}</span></div>${extra}<div class="cmpmeta" id="gcm${k}"></div><div class="hv" id="gch${k}">&nbsp;</div><div id="gc${k}"></div></div>`;}).join("");
+  cards.forEach((c,k)=>{
+    const ls=c.lines.map(([lab,g],j)=>({lab,g,y:sp(g),color:CMP_COLORS[j%CMP_COLORS.length]})).filter(l=>l.y);
+    if(!ls.length){$("#gc"+k).innerHTML='<p class="hint" style="padding:30px;text-align:center">이 테너에 데이터가 없습니다.</p>';return;}
+    let meta=ls.map(l=>{const [v,ci]=last(l.y);const m=v==null?null:chg(l.y,ci,"MTD");
+      return `<span><i style="background:${l.color}"></i>${l.lab} <b>${v==null?"-":v.toFixed(1)}</b> <span class="${cls(m)}">MTD ${fbp(m)}</span></span>`;}).join("");
+    if(c.gap&&ls.length>=2){const A=ls[c.gap[0]],B=ls[c.gap[1]];if(A&&B){const g=A.y.map((a,i)=>a==null||B.y[i]==null?null:a-B.y[i]);const [gv,gi]=last(g);const gm=gv==null?null:chg(g,gi,"MTD");
+      meta+=`<span class="gap">${A.lab} − ${B.lab}: <b>${gv==null?"-":fbp(gv)}bp</b> (MTD <span class="${cls(gm)}">${fbp(gm)}</span>)</span>`;}}
+    $("#gcm"+k).innerHTML=meta;
+    const hv=$("#gch"+k),hoverAt=(u,i)=>{if(i==null||i<0){hv.innerHTML="&nbsp;";return;}
+      hv.innerHTML=`<span class="d">${DATES[i]}</span> `+ls.map(l=>{let j=i;while(j>0&&l.y[j]==null&&i-j<10)j--;const v=l.y[j];return `<span style="color:${l.color}">${l.lab} ${v==null?"-":v.toFixed(1)}</span>`;}).join(" · ");};
+    tsChart("gc"+k,ls.map(l=>({label:l.lab,color:l.color,x:TS,y:l.y,width:2})),{unit:"bp",height:260,onCursor:hoverAt,init:[TS[i0],TS[i1]],sync:"gc"});
+  });
+  drawBarCard();
+}
 function drawGrid(){
   $$("#gdMode button").forEach(b=>b.classList.toggle("on",b.dataset.m===gd.mode));
+  // 섹터 비교 모드: 테너 선택 + 비교 카드
+  const cmp=gd.mode==="cmp";
+  $("#gdCards").style.display=cmp?"none":"";$("#gdCmpCards").style.display=cmp?"":"none";
+  $("#gdChips").style.display=cmp?"none":"";$("#gdHint").style.display=cmp?"none":"";$("#gcHint").style.display=cmp?"":"none";
+  $("#gdRangeWrap").style.display=cmp?"none":"";$("#gcRangeWrap").style.display=cmp?"":"none";
+  if(cmp){$("#gdGroup").style.display="none";$("#gdTenor").style.display="";$("#gdTenor").value=String(gd.tenor);drawCmp();return;}
   $("#gdGroup").style.display=gd.mode==="group"?"":"none";$("#gdTenor").style.display=gd.mode==="tenor"?"":"none";
   $("#gdGroup").value=gd.group;$("#gdTenor").value=String(gd.tenor);
   const items=gdItems();
@@ -1253,7 +1408,8 @@ $("#fwOverlay").onchange=()=>drawFwChart();
 const fwRangeGet=rangeBar($("#fwRange"),"fwd","3Y",()=>drawFwChart());
 function renderFwChips(){$("#fwChips").innerHTML=fwAll().map(n=>`<span class="chip ${fwSel.includes(n)?"on":""}" data-n="${n}" ${fwSel.includes(n)?`style="background:${fwColor(n)};border-color:${fwColor(n)}"`:""}>${n}</span>`).join("");}
 function drawFwChart(){
-  const [i0,i1]=fwRangeGet();
+  // 그래프 끝은 CD·IRS 가 모두 있는(선도금리가 계산되는) 마지막 날에 맞춤
+  let [i0,i1]=fwRangeGet();const lastF=lastIdx(fwdSeries("3Mx3M"));if(lastF>=0&&i1>lastF)i1=lastF;
   const ls=fwAll().filter(n=>fwSel.includes(n)).map(n=>({label:n,color:fwColor(n),x:TS,y:fwdSeries(n).v}));
   for(const o of $$("#fwOverlay input:checked")){const s=BYNAME[o.value];if(s)ls.push({label:o.value,color:css("--muted"),x:TS,y:s.v,step:o.value==="기준금리",width:o.value==="기준금리"?2:1});}
   tsChart("fwChart",ls,{height:400,init:[TS[i0],TS[i1]],sync:"fwd"});
@@ -1267,28 +1423,38 @@ const FW_CMP=["WTD","1M","3M","6M","1Y"];let fwCmp=store.get("fwCmp",["1M"]).map
 $("#fwCmp").innerHTML=FW_CMP.map(p=>`<label><input type="checkbox" value="${p}" ${fwCmp.includes(p)?"checked":""}>${pLab(p)}</label>`).join("");
 $("#fwCmp").onchange=()=>{fwCmp=$$("#fwCmp input:checked").map(x=>x.value);store.set("fwCmp",fwCmp);drawFwPath();};
 $("#fwDate").min=DATES[0];$("#fwDate").max=DATES[LAST];$("#fwDate").onchange=()=>drawFwPath();
+$("#fwModel").checked=store.get("fwModel",true);$("#fwModel").onchange=()=>{store.set("fwModel",$("#fwModel").checked);drawFwPath();};
 const mLbl=m=>m===0?"현재":(m>=12?Math.floor(m/12)+"Y":"")+(m%12?m%12+"M":"");
 function drawFwPath(){
   const pm=fwMode==="SIMPLE"?"FF":fwMode;
-  $("#fwPathNote").textContent=`3M 선도금리를 3개월씩 이어 붙인 경로입니다 (0×3M = CD 3M). ${fwMode==="SIMPLE"?"단순 방식으로는 중간 만기를 만들 수 없어 부트스트랩 FF로 계산합니다. ":""}인상 횟수는 (선도 − 기준일 기준금리)/0.25%p 입니다 (+ 인상, − 인하).`;
+  $("#fwPathNote").textContent=`3M 선도금리를 3개월씩 이어 붙인 경로입니다 (0×3M = CD 3M). ${fwMode==="SIMPLE"?"단순 방식으로는 중간 만기를 만들 수 없어 부트스트랩 FF로 계산합니다. ":""}인상 횟수는 (선도 − 기준일 기준금리)/0.25%p 입니다 (+ 인상, − 인하).${$("#fwModel").checked?" 모형 기대 = 국고 ACM 이 과거 패턴으로 예측한 단기금리(콜금리 기준)를 같은 3개월 구간으로 평균한 값. 시장 선도에는 CD−콜 스프레드(약 20~25bp)와 기간프리미엄이 섞여 있어 모형보다 높게 나오는 경향이 있습니다.":""}`;
   const bi=idxOnOrBefore($("#fwDate").value);if(bi<0)return;
   const days=[...new Set([bi,...fwCmp.map(p=>shiftIdx(bi,p))].filter(i=>i>=0))];
   const xs=[];for(let q=0;q<40;q++)xs.push(q/4);
   const lines=days.map((di,k)=>({di,label:`${DATES[di]}`,color:PAL[k%PAL.length],y:xs.map(x=>{const v=fwdBoot(di,pm,Math.round(x*12)+"M","3M");return v==null?null:+v.toFixed(4);})}));
   const base=BYNAME["기준금리"];const br=base?valAt(base,bi):null;
+  // 모형 기대: 월별 기대 단기금리를 3개월 구간 평균으로 맞춤
+  const AM=$("#fwModel").checked?acmPath("KR",bi):null;
+  const mq=AM?xs.map((x,q)=>{const a=AM.path.slice(q*3,q*3+3);return a.length?+(a.reduce((s,v)=>s+v,0)/a.length).toFixed(4):null;}):null;
   const id="fwPath",el=$("#"+id);if(plots[id]){plots[id].destroy();delete plots[id];}el.innerHTML="";
   if(!window.uPlot||lines[0].y.every(v=>v==null)){el.innerHTML='<p class="hint" style="padding:40px;text-align:center">해당 일자의 CD·IRS 데이터가 없습니다.</p>';$("#fwPathTbl").innerHTML="";return;}
-  const ser=lines.map((l,k)=>({label:l.label,stroke:l.color,width:k?1.4:2.2,dash:k?[6,4]:[],paths:uPlot.paths.stepped({align:1}),value:(u,v)=>v==null?"-":v.toFixed(3)}));
-  const data=[xs,...lines.map(l=>l.y)];
-  if(br!=null){ser.push({label:"기준금리 "+DATES[bi],stroke:css("--muted"),width:1,dash:[2,3],value:(u,v)=>v==null?"-":v.toFixed(2)});data.push(xs.map(()=>br));}
-  plots[id]=new uPlot({width:el.clientWidth||800,height:380,scales:{x:{time:false}},
-    series:[{label:"시작",value:(u,v)=>v==null?"-":(v===0?"현재":mLbl(Math.round(v*12))+" 후")},...ser],
-    axes:[axis({values:(u,vs)=>vs.map(v=>v===0?"0":tenorLabel(v))}),axis({size:58,values:(u,vs)=>vs.map(v=>v.toFixed(2))})],
+  // 차트는 월 격자: 시장 3M 선도(분기 시작점)와 모형 기대(월별)를 부드러운 곡선으로
+  const xmo=[];for(let h=0;h<=117;h++)xmo.push(h/12);
+  const onQ=y=>xmo.map((x,h)=>h%3===0?y[h/3]:null);
+  const smooth=uPlot.paths.spline?uPlot.paths.spline():undefined;
+  const ser=lines.map((l,k)=>({label:l.label,stroke:l.color,width:k?1.4:2.4,dash:k?[6,4]:[],spanGaps:true,paths:smooth,points:{show:false},value:(u,v)=>v==null?"-":v.toFixed(3)}));
+  const data=[xmo,...lines.map(l=>onQ(l.y))];
+  if(AM){ser.push({label:`모형 기대 (ACM ${DATES[AM.k]})`,stroke:PAL[5],width:2.4,dash:[],spanGaps:true,paths:smooth,points:{show:false},value:(u,v)=>v==null?"-":v.toFixed(3)});data.push(xmo.map((x,h)=>+AM.path[h].toFixed(4)));}
+  if(br!=null){ser.push({label:"기준금리 "+DATES[bi],stroke:css("--muted"),width:1,dash:[2,3],points:{show:false},value:(u,v)=>v==null?"-":v.toFixed(2)});data.push(xmo.map(()=>br));}
+  plots[id]=new uPlot({width:el.clientWidth||800,height:380,
+    series:[{label:"시작",value:(u,v)=>v==null?"-":(v===0?"현재":mLbl(Math.round(v*12))+" 후")},...ser],scales:{x:{time:false,range:()=>[0,10]}},
+    axes:[axis({values:(u,vs)=>vs.map(v=>v===0?"지금":v+"Y")}),axis({size:58,values:(u,vs)=>vs.map(v=>v.toFixed(2))})],
     cursor:{drag:{x:false,y:false}}},data,el);
-  let h=`<thead><tr><th>시작</th><th>구간</th><th>${DATES[bi]}</th><th>기준금리 대비(bp)</th><th>인상 횟수</th>${lines.slice(1).map(l=>`<th>Δ vs ${l.label}(bp)</th>`).join("")}</tr></thead><tbody>`;
+  let h=`<thead><tr><th>시작</th><th>구간</th><th>${DATES[bi]}</th><th>기준금리 대비(bp)</th><th>인상 횟수</th>${mq?"<th>모형 기대</th><th>시장 − 모형(bp)</th><th>모형 인상 횟수</th>":""}${lines.slice(1).map(l=>`<th>Δ vs ${l.label}(bp)</th>`).join("")}</tr></thead><tbody>`;
   for(let q=0;q<=12;q++){const v=lines[0].y[q];const d=v==null||br==null?null:(v-br)*100;
     const st=addMonths(DAYN[bi],3*q),en=addMonths(st,3),fmtd=dn=>new Date(dn*864e5).toISOString().slice(2,10);
-    h+=`<tr><td>${mLbl(q*3)}</td><td class="hint">${fmtd(st)}~${fmtd(en)}</td><td><b>${f3(v)}</b></td><td class="${cls(d)}">${fbp(d)}</td><td class="${cls(d)}">${d==null?"-":(d/25>0?"+":"")+(d/25).toFixed(2)+"회"}</td>${
+    h+=`<tr><td>${mLbl(q*3)}</td><td class="hint">${fmtd(st)}~${fmtd(en)}</td><td><b>${f3(v)}</b></td><td class="${cls(d)}">${fbp(d)}</td><td class="${cls(d)}">${d==null?"-":(d/25>0?"+":"")+(d/25).toFixed(2)+"회"}</td>${mq?(()=>{const m=mq[q],g=m==null||v==null?null:(v-m)*100,dm=m==null||br==null?null:(m-br)*100;
+        return `<td>${f3(m)}</td><td class="${cls(g)}">${fbp(g)}</td><td class="${cls(dm)}">${dm==null?"-":(dm/25>0?"+":"")+(dm/25).toFixed(2)+"회"}</td>`;})():""}${
       lines.slice(1).map(l=>{const c=l.y[q]==null||v==null?null:(v-l.y[q])*100;return `<td class="${cls(c)}">${fbp(c)}</td>`;}).join("")}</tr>`;}
   $("#fwPathTbl").innerHTML=h+"</tbody>";
 }
@@ -1501,7 +1667,100 @@ function rdChart(m){
   $("#rdLegend").innerHTML=sets.map(s=>`<span><i style="background:${s.color};${s.dash.length?"height:0;border-top:2px dashed "+s.color+";background:none":""}"></i>${s.label} ${s.date}</span>`).join("")
     +`<span><i style="background:#16a34a"></i>롤다운</span><span><i style="height:0;border-top:2px dashed #dc2626;background:none"></i>커브 변화</span>`;
 }
-renders.roll=drawRoll;
+
+/* ---------- 섹터 롤 표 (크레딧SP.xlsx Rolling · 롤분해 시트와 같은 방식) */
+const RT_GROUPS=["국고채권","공사/공단채 AAA","산금채 AAA","중금채 AAA","은행채 AAA","은행채 AA+","카드채 AA+","카드채 AA","카드채 AA-",
+  "기타금융채AA+","기타금융채AA-","기타금융채A+","기타금융채A0","기타금융채A-","회사채AAA","회사채AA+","회사채AA0","회사채AA-","회사채A+","회사채A0","회사채A-"].filter(g=>BYGROUP[g]);
+const rtFam=g=>g==="국고채권"?0:/공사|산금|중금/.test(g)?1:/은행/.test(g)?2:/카드/.test(g)?3:/기타금융/.test(g)?4:5;
+const RT_T=[0.75,1,1.5,2,2.5,3,4,5],rtLab=t=>t>=4?tenorLabel(t)+"*":tenorLabel(t);
+let rt=store.get("rt",{v1:"cur",v2:"3",st:"2013-01-01",exOn:true,exA:"2022-01-01",exB:"2023-03-21"});
+const rtSave=()=>store.set("rt",rt);
+// 그룹·만기별 금리 배열. 격자에 없는 만기(3.5Y·4.5Y)는 양옆 만기 직선보간
+function rtSer(g,t){const L=BYGROUP[g]||[],e=L.find(s=>s.years===t);if(e)return e.v;
+  const ys=L.filter(s=>s.years!=null).sort((a,b)=>a.years-b.years),hi=ys.find(s=>s.years>t),lo=[...ys].reverse().find(s=>s.years<t);
+  if(!hi||!lo)return null;const w=(t-lo.years)/(hi.years-lo.years);return lo.v.map((a,i)=>{const b=hi.v[i];return a==null||b==null?null:a+(b-a)*w;});}
+const rtCache={};
+function rtRoll(g,t){const k=g+"|"+t;if(k in rtCache)return rtCache[k];const A=rtSer(g,t),B=rtSer(g,t-0.5);
+  return rtCache[k]=A&&B?A.map((a,i)=>a==null||B[i]==null?null:(a-B[i])*100):null;}
+const rtEdate=(ds,m)=>{const d=new Date(ds+"T00:00:00Z"),day=d.getUTCDate();d.setUTCDate(1);d.setUTCMonth(d.getUTCMonth()+m);
+  const dim=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+1,0)).getUTCDate();d.setUTCDate(Math.min(day,dim));return d.toISOString().slice(0,10);};
+function rtStats(a,bi){
+  const asof=DATES[bi],d1=rtEdate(asof,-12),d3=rtEdate(asof,-36);let exA=rt.exA,exB=rt.exB;if(exA>exB)[exA,exB]=[exB,exA];
+  const all=[],y1=[],y3=[];
+  for(const i of RD_IDX){if(i>bi)break;const v=a[i],d=DATES[i];if(v==null||d<rt.st||(rt.exOn&&d>=exA&&d<=exB))continue;
+    all.push(v);if(d>=d1)y1.push(v);if(d>=d3)y3.push(v);}
+  const mean=x=>x.length?x.reduce((s,v)=>s+v,0)/x.length:null,sd=x=>{const m=mean(x);return x.length?Math.sqrt(x.reduce((s,v)=>s+(v-m)**2,0)/x.length):null;};
+  const cur=a[bi],m3=mean(y3),s3=sd(y3);
+  return {cur,m1:mean(y1),m3,s3,z3:cur==null||!s3?null:(cur-m3)/s3,mAll:mean(all),sAll:sd(all),
+    pct:cur==null||!all.length?null:all.filter(v=>v<=cur).length/all.length*100,n:all.length};}
+const RT_V1=[["cur","현재"],["m1","1Y 평균"],["m3","3Y 평균"],["s3","3Y σ"],["z3","z(3Y)"],["mAll","전기간 평균"],["pct","백분위"]];
+const RT_V2=[...RT_T.map(t=>[String(t),rtLab(t).replace("*","")]),["tot","총수익 표"],["ex","크레딧 초과 표"]];
+$("#rtView1").innerHTML=RT_V1.map(([k,l])=>`<button data-v="${k}" style="padding:2px 9px;font-size:11px">${l}</button>`).join("");
+$("#rtView2").innerHTML=RT_V2.map(([k,l])=>`<button data-v="${k}" style="padding:2px 9px;font-size:11px">${l}</button>`).join("");
+$("#rtView1").onclick=e=>{const b=e.target.closest("button");if(!b)return;rt.v1=b.dataset.v;rtSave();drawRtA();};
+$("#rtView2").onclick=e=>{const b=e.target.closest("button");if(!b)return;rt.v2=b.dataset.v;rtSave();drawRtB();};
+$("#rtDate").min=DATES[RD_IDX[0]];$("#rtDate").max=DATES[RD_LAST];
+$("#rtDate").onchange=()=>drawRollTbl();
+$("#rtSt").onchange=$("#rtExA").onchange=$("#rtExB").onchange=$("#rtExOn").onchange=()=>{
+  rt.st=$("#rtSt").value||"2013-01-01";rt.exA=$("#rtExA").value;rt.exB=$("#rtExB").value;rt.exOn=$("#rtExOn").checked;rtSave();drawRtA();};
+const rtBi=()=>rdSnap($("#rtDate").value||DATES[RD_LAST]);
+function drawRtA(){
+  const bi=rtBi(),v=rt.v1;$$("#rtView1 button").forEach(b=>b.classList.toggle("on",b.dataset.v===v));
+  const M=RT_GROUPS.map(g=>RT_T.map(t=>{const a=rtRoll(g,t);return a?rtStats(a,bi):null;}));
+  const val=c=>c?c[v]:null,all=M.flat().map(val).filter(x=>x!=null);
+  const max=v==="z3"?2:v==="pct"?50:Math.max(...all.map(Math.abs),1);
+  const fmt=x=>x==null?"-":v==="z3"?(x>0?"+":"")+x.toFixed(2):v==="pct"?x.toFixed(0)+"%":x.toFixed(1);
+  const hs=x=>x==null?"":v==="s3"?heat(x,max,false):heat(v==="pct"?x-50:x,max,true);
+  let h=`<thead><tr><th>${DATES[bi]}</th>${RT_T.map(t=>`<th>${rtLab(t)}</th>`).join("")}</tr></thead><tbody>`;
+  RT_GROUPS.forEach((g,r)=>{const sep=r&&rtFam(g)!==rtFam(RT_GROUPS[r-1])?' class="gsep"':"";
+    h+=`<tr${sep}><td>${rdShort(g)}</td>${M[r].map((c,k)=>{const x=val(c);
+      const tip=c?`${rdShort(g)} ${rtLab(RT_T[k])} · 현재 ${c.cur==null?"-":c.cur.toFixed(1)} · 1Y ${c.m1==null?"-":c.m1.toFixed(1)} · 3Y ${c.m3==null?"-":c.m3.toFixed(1)} (σ ${c.s3==null?"-":c.s3.toFixed(1)}) · 전기간 ${c.mAll==null?"-":c.mAll.toFixed(1)} · ${c.pct==null?"-":c.pct.toFixed(0)}%ile · n=${c.n}`:"";
+      return `<td class="ck" data-g="${g}" data-t="${RT_T[k]}" title="${tip}" style="${hs(x)}">${fmt(x)}</td>`;}).join("")}</tr>`;});
+  $("#rtTblA").innerHTML=h+"</tbody>";
+}
+// 6M 보유수익 분해: D = (T−0.5)/(1+y(T−0.5)/100)
+function rtDecomp(g,T,bi){
+  const y=(gg,t)=>{const a=rtSer(gg,t);return a?a[bi]:null;};
+  const k1=y("국고채권",T),k0=y("국고채권",T-0.5);if(k1==null||k0==null)return null;
+  const Dk=(T-0.5)/(1+k0/100),kc=k1*0.5,kr=Dk*(k1-k0),o={kc,kr,ks:kc+kr};
+  if(g==="국고채권"){o.tot=o.ks;return o;}
+  const c1=y(g,T),c0=y(g,T-0.5);if(c1==null||c0==null)return null;
+  const Dc=(T-0.5)/(1+c0/100);o.sc=(c1-k1)*0.5;o.sr=Dc*(c1-c0)-Dk*(k1-k0);o.ex=o.sc+o.sr;o.tot=o.ks+o.ex;return o;}
+function drawRtB(){
+  const bi=rtBi(),v=rt.v2;$$("#rtView2 button").forEach(b=>b.classList.toggle("on",b.dataset.v===v));
+  const f4=x=>x==null?"-":x.toFixed(4),sepOf=(g,r)=>r&&rtFam(g)!==rtFam(RT_GROUPS[r-1])?' class="gsep"':"";
+  let h;
+  if(v==="tot"||v==="ex"){
+    const key=v==="tot"?"tot":"ex";$("#rtBTitle").textContent=`6M ${v==="tot"?"총 보유수익":"크레딧 초과수익"} · 섹터 × 테너 (%)`;
+    const rows=RT_GROUPS.filter(g=>key==="tot"||g!=="국고채권"),M=rows.map(g=>RT_T.map(t=>{const o=rtDecomp(g,t,bi);return o?o[key]:null;}));
+    const max=Math.max(...M.flat().filter(x=>x!=null).map(Math.abs),0.01);
+    h=`<thead><tr><th>${DATES[bi]}</th>${RT_T.map(t=>`<th>${rtLab(t).replace("*","")}</th>`).join("")}</tr></thead><tbody>`;
+    rows.forEach((g,r)=>{h+=`<tr${sepOf(g,r)}><td>${rdShort(g)}</td>${M[r].map(x=>`<td style="${x==null?"":heat(x,max,key==="ex")}">${f4(x)}</td>`).join("")}</tr>`;});
+  }else{
+    const T=+v;$("#rtBTitle").textContent=`6M 보유수익 분해 · ${rtLab(T).replace("*",T>=4?" (보간)":"")} (%)`;
+    const rows=RT_GROUPS.map(g=>[g,rtDecomp(g,T,bi)]),exs=rows.map(r=>r[1]&&r[1].ex).filter(x=>x!=null),mx=Math.max(...exs.map(Math.abs),0.01);
+    h=`<thead><tr><th>${DATES[bi]}</th><th>국고 캐리</th><th>국고 롤</th><th>국고 소계</th><th>SP 캐리</th><th>SP 롤</th><th>크레딧 초과</th><th>총 6M 수익</th><th>연환산</th></tr></thead><tbody>`;
+    rows.forEach(([g,o],r)=>{h+=`<tr${sepOf(g,r)}><td>${rdShort(g)}</td>${o?`<td>${f4(o.kc)}</td><td>${f4(o.kr)}</td><td>${f4(o.ks)}</td><td>${f4(o.sc)}</td><td class="${cls(o.sr)}">${f4(o.sr)}</td>
+      <td style="${o.ex==null?"":heat(o.ex,mx,true)}">${f4(o.ex)}</td><td><b>${f4(o.tot)}</b></td><td>${(o.tot*2).toFixed(2)}%</td>`:'<td colspan="8">-</td>'}</tr>`;});
+  }
+  $("#rtTblB").innerHTML=h+"</tbody>";
+}
+function drawRollTbl(){
+  if(!$("#rtDate").value)$("#rtDate").value=DATES[RD_LAST];
+  $("#rtSt").value=rt.st;$("#rtExA").value=rt.exA;$("#rtExB").value=rt.exB;$("#rtExOn").checked=rt.exOn;
+  drawRtA();drawRtB();
+}
+// 셀 클릭 → 계산기(BEP 6개월)로
+$("#rtTblA").onclick=e=>{const c=e.target.closest("td[data-g]");if(!c)return;
+  rd.group=RD_GROUPS.includes(c.dataset.g)?c.dataset.g:rd.group;rd.T=+c.dataset.t;rd.today=true;rd.bpN=6;rdSave();
+  rdSub="calc";store.set("rdSub",rdSub);renders.roll();setTimeout(()=>$("#bpOut").scrollIntoView({behavior:"smooth",block:"center"}),50);};
+let rdSub=store.get("rdSub","calc");
+$("#rdSub").onclick=e=>{const b=e.target.closest("button");if(!b)return;rdSub=b.dataset.v;store.set("rdSub",rdSub);renders.roll();};
+renders.roll=()=>{
+  $$("#rdSub button").forEach(b=>b.classList.toggle("on",b.dataset.v===rdSub));
+  $("#rtView").style.display=rdSub==="tbl"?"":"none";$("#rdCalcView").style.display=rdSub==="tbl"?"none":"";
+  if(rdSub==="tbl")drawRollTbl();else drawRoll();
+};
 
 /* ---------- 미국채 (ACM 기간프리미엄) ----------
    ACM 모형금리 = 위험중립(단기금리 기대 평균) + 기간프리미엄. 뉴욕연준 ACMTermPremium.xls */
@@ -1511,7 +1770,7 @@ const ACM=(k,n)=>ACMC(us.cty,k,n);
 const CTY={US:{mkt:n=>`미국채 ${n}Y`,pol:"미국 기준금리",polLab:"미국 기준금리",mktLab:"미국채",
   note:"뉴욕연준이 공개하는 ACM 추정치 (팩터 5개, 1961년~). 업데이트.bat 실행 시 자동으로 받아옵니다."},
   KR:{mkt:n=>`국고채권 ${n}Y`,pol:"기준금리",polLab:"한국 기준금리",mktLab:"국고",
-  note:"국내ACM.xlsx 의 2001년~ 월말 국고 금리로 같은 ACM 방식을 자체 추정 (팩터 3개, 콜금리를 단기금리로 사용). 수준은 추정기간에 따라 ±20~40bp 달라질 수 있어 방향·변화 위주로 보세요."}};
+  note:"2001년~ 월말 국고 금리(매달 INFO_DATA 에서 자동 추가)로 같은 ACM 방식을 자체 추정 (팩터 3개, 콜금리를 단기금리로 사용). 수준은 추정기간에 따라 ±20~40bp 달라질 수 있어 방향·변화 위주로 보세요."}};
 const US_MATS=[1,2,3,4,5,6,7,8,9,10];
 let us=store.get("us",{mat:10,kind:"TP",cmp:["1M","1Y"]});if(!us.cty)us.cty="US";
 const HAS_ACM=()=>!!ACM("TP",10);
@@ -1589,13 +1848,83 @@ function drawUsCmp(){
   if(K&&U){const k=bp(K),u=bp(U);let lu=null;ls.push({label:"한−미 (bp)",color:PAL[8],dash:[4,3],width:1.2,x:TS,y:k.map((v,i)=>{if(u[i]!=null)lu=u[i];return v==null||lu==null?null:+(v-lu).toFixed(1);})});}
   tsChart("usCmpChart",ls,{unit:"bp",zero:true,height:340,init:[TS[i0],TS[i1]]});
 }
-renders.ust=()=>{
+// ---------- 기대 단기금리 경로: ACM 모형 기대 vs 시장 선도금리
+// 모형: E[r_{t+h}] = (d0 + d1·E[X_{t+h}])×1200, E[X_{t+h}] = mu + Phi·E[X_{t+h-1}]  (h = 개월)
+function acmPath(c,i,H=120){
+  const M=DB.acm&&DB.acm[c];if(!M)return null;
+  let k=i;while(k>=0&&!M.X[DATES[k]]&&i-k<15)k--;if(k<0||!M.X[DATES[k]])return null;
+  let x=M.X[DATES[k]].slice();const out=[];
+  for(let h=0;h<=H;h++){out.push((M.d0+M.d1.reduce((a,b,j)=>a+b*x[j],0))*1200);x=M.mu.map((m,r)=>m+M.Phi[r].reduce((a,b,j)=>a+b*x[j],0));}
+  return {k,path:out};
+}
+// 시장: 3개월 선도금리 체인. 한국 = CD+IRS 부트스트랩(FF), 미국 = 미국채 금리를 무이표로 근사
+function mktPath(c,k){
+  const xs=[],ys=[];
+  if(c==="KR"){for(let h=0;h<120;h+=3){const v=fwdBoot(k,"FF",h+"M","3M");xs.push(h/12);ys.push(v==null?null:v);}}
+  else{const pts=(BYGROUP["미국채"]||[]).filter(s=>s.years!=null).map(s=>[s.years,valAt(s,k)]).filter(p=>p[1]!=null).sort((a,b)=>a[0]-b[0]);
+    if(pts.length<3)return null;const z=t=>rdInterp(pts,t);
+    for(let h=0;h<120;h+=3){const t0=h/12,t1=t0+0.25;xs.push(t0);ys.push((z(t1)*t1-(t0?z(t0)*t0:0))/0.25);}}
+  return {xs,ys};
+}
+// 같은 패널을 기간프리미엄 탭(국가 전환)과 선도금리 탭(한국)에서 사용
+const PATH_UST={chart:"pathChart",tbl:"pathTbl",note:"pathNote",date:"pathDate",cmp:"pathCmp",cty:null};
+const drawUsPath=()=>drawPath(us.cty,PATH_UST);
+$("#pathCmp").onchange=$("#pathDate").onchange=()=>drawUsPath();
+function drawPath(c,P){
+  const M=DB.acm&&DB.acm[c];const id=P.chart,el=$("#"+id);if(plots[id]){plots[id].destroy();delete plots[id];}el.innerHTML="";
+  if(!M){$("#"+P.tbl).innerHTML="";$("#"+P.note).textContent="모형 데이터가 없습니다. 업데이트.bat 을 다시 실행하세요.";return;}
+  const xsK=Object.keys(M.X).sort(),lastD=xsK[xsK.length-1];
+  if(P.cty!==c||!$("#"+P.date).value){$("#"+P.date).value=lastD;P.cty=c;}
+  $("#"+P.date).min=xsK[0];$("#"+P.date).max=lastD;
+  const bi=idxOnOrBefore($("#"+P.date).value);const A=acmPath(c,bi);if(!A){$("#"+P.tbl).innerHTML="";return;}
+  const k=A.k,PL=BYNAME[CTY[c].pol],pol=PL?valAt(PL,k):null;
+  $("#"+P.note).innerHTML=c==="KR"
+    ?`모형 = 국고 ACM(팩터 3개)이 과거 패턴으로 예측한 <b>1개월 단기금리</b>의 기대 경로 (콜금리 기준). 시장 = CD+IRS 로 부트스트랩한 <b>3개월 선도금리</b> 체인 — CD−콜 스프레드(약 20~25bp)와 기간프리미엄이 섞여 있어 모형보다 높게 나오는 경향이 있습니다.`
+    :`모형 = 미국 동일조건 ACM(팩터 3개, 2001년~)의 1개월 단기금리 기대 경로 — 2001년 이후 저금리 시기가 표본에 많아 장기적으로 낮은 금리로 회귀하는 경향이 강합니다. 시장 = 미국채 금리를 무이표로 근사해 계산한 3개월 선도금리 체인(근사치)이며 기간프리미엄이 섞여 있습니다.`;
+  const hx=[];for(let h=0;h<=120;h++)hx.push(h/12);
+  const mk=mktPath(c,k);
+  const sets=[{label:`모형 기대 ${DATES[k]}`,x:hx,y:A.path,color:PAL[5],w:2.4,dash:[]}];
+  if(mk)sets.push({label:`시장 선도 3M ${DATES[k]}`,x:mk.xs,y:mk.ys,color:PAL[0],w:2.2,dash:[],step:true});
+  if($("#"+P.cmp).checked){let j=shiftIdx(k,"1M");const B=j>=0?acmPath(c,j):null;
+    if(B){sets.push({label:`모형 기대 ${DATES[B.k]}`,x:hx,y:B.path,color:PAL[5],w:1.3,dash:[6,4]});const mb=mktPath(c,B.k);if(mb)sets.push({label:`시장 선도 3M ${DATES[B.k]}`,x:mb.xs,y:mb.ys,color:PAL[0],w:1.3,dash:[6,4],step:true});}}
+  // 서로 다른 x 격자를 합쳐 하나의 데이터로
+  const xu=[...new Set(sets.flatMap(s=>s.x))].sort((a,b)=>a-b);
+  const data=[xu,...sets.map(s=>{const m=new Map(s.x.map((x,i)=>[x,s.y[i]]));return xu.map(x=>m.has(x)?(m.get(x)==null?null:+m.get(x).toFixed(4)):null);})];
+  const sm=uPlot.paths.spline?uPlot.paths.spline():undefined;
+  const ser=sets.map(s=>({label:s.label,stroke:s.color,width:s.w,dash:s.dash,spanGaps:true,paths:sm,points:{show:false},value:(u,v)=>v==null?"-":v.toFixed(3)+"%"}));
+  if(pol!=null){ser.push({label:`${CTY[c].polLab} ${pol.toFixed(2)}%`,stroke:css("--muted"),width:1,dash:[2,3],points:{show:false},value:(u,v)=>v==null?"-":v.toFixed(2)+"%"});data.push(xu.map(()=>pol));}
+  plots[id]=new uPlot({width:el.clientWidth||800,height:340,scales:{x:{time:false,range:()=>[0,10]}},
+    series:[{label:"몇 년 후",value:(u,v)=>v==null?"-":(v===0?"지금":mLbl(Math.round(v*12))+" 후")},...ser],
+    axes:[axis({values:(u,vs)=>vs.map(v=>v===0?"지금":v+"Y")}),axis({size:58,values:(u,vs)=>vs.map(v=>v.toFixed(2))})],cursor:{drag:{x:false,y:false}}},data,el);
+  // 표: 시점별 모형 vs 시장
+  const at=(arr,xs,t)=>{let best=null,bd=1e9;xs.forEach((x,i)=>{const d=Math.abs(x-t);if(d<bd&&arr[i]!=null){bd=d;best=arr[i];}});return bd<0.13?best:null;};
+  const rows=[[0,"지금"],[0.25,"3개월 후"],[0.5,"6개월 후"],[1,"1년 후"],[2,"2년 후"],[3,"3년 후"],[5,"5년 후"],[9.75,"약 10년 후"]];
+  // 시장 3M 선도와 같은 구간으로 비교: 모형도 그 시점부터 3개월 평균 (선도금리 탭과 동일)
+  const m3=t=>{const h0=Math.round(t*12),a=A.path.slice(h0,h0+3);return a.length?a.reduce((x,y)=>x+y,0)/a.length:null;};
+  let h=`<thead><tr><th>시점</th><th>모형 기대 (3개월 평균)</th><th>시장 선도(3M)</th><th>시장 − 모형</th><th>모형: ${CTY[c].polLab} 대비</th><th>시장: ${CTY[c].polLab} 대비</th></tr></thead><tbody>`;
+  for(const [t,lab] of rows){const m=m3(t),v=mk?at(mk.ys,mk.xs,t):null,g=m!=null&&v!=null?(v-m)*100:null;
+    const cnt=x=>x==null||pol==null?"-":`${((x-pol)*4>0?"+":"")+((x-pol)*4).toFixed(1)}회`;
+    h+=`<tr><td>${lab}</td><td>${f3(m)}</td><td>${f3(v)}</td><td class="${cls(g)}">${fbp(g)}bp</td><td>${cnt(m)}</td><td>${cnt(v)}</td></tr>`;}
+  // 검산: 경로 평균 = 위험중립 금리
+  // 검산은 경로를 만든 같은 모형의 위험중립 금리와 비교 (미국은 동일조건 모형)
+  const rn=n=>{const s=c==="KR"?ACMC("KR","RN",n):BYNAME[`미국 ACM동일조건 위험중립 ${n}Y`];return s?valAt(s,k):null;},avg=n=>A.path.slice(0,n*12).reduce((a,b)=>a+b,0)/(n*12);
+  h+=`<tr class="sep"><td colspan="6" class="hint" style="text-align:left;white-space:normal">검산: 모형 경로를 3년 평균하면 ${avg(3).toFixed(3)}% ≈ 3Y 위험중립 ${f3(rn(3))}%, 10년 평균 ${avg(10).toFixed(3)}% ≈ 10Y 위험중립 ${f3(rn(10))}% (차이는 볼록성 보정)</td></tr>`;
+  $("#"+P.tbl).innerHTML=h+"</tbody>";
+}
+let ustSub=store.get("ustSub","main");
+$("#ustSub").onclick=e=>{const b=e.target.closest("button");if(!b)return;ustSub=b.dataset.v;store.set("ustSub",ustSub);renders.ust();};
+const renderUstMain=()=>{
   $$("#usCty button").forEach(b=>b.classList.toggle("on",b.dataset.c===us.cty));
   $("#usCtyNote").textContent=CTY[us.cty].note;
   drawUsCards();
   $("#usNoAcm").style.display=HAS_ACM()?"none":"";
   if(HAS_ACM()){drawUsDec();drawUsCurve();drawUsTable();}
-  drawUsCmp();
+  drawUsCmp();drawUsPath();
+};
+renders.ust=()=>{
+  $$("#ustSub button").forEach(b=>b.classList.toggle("on",b.dataset.v===ustSub));
+  $("#ustMain").style.display=ustSub==="main"?"":"none";$("#ustTpu").style.display=ustSub==="tpu"?"":"none";
+  if(ustSub==="tpu")renders.tpu();else renderUstMain();
 };
 
 /* ---------- TP 활용 ----------
@@ -1860,10 +2189,42 @@ function ybShowDataBtn(){
   b.onclick=()=>inp.click();
   inp.onchange=async()=>{const f=inp.files[0];inp.value="";if(!f)return;try{await ybLoadFile(f);location.reload();}catch(e){alert("불러오기 실패: "+e.message);}};
 }
+/* 웹 배포판: data.enc(비밀번호로 암호화한 data.js)를 받아 브라우저 안에서 복호화.
+   형식은 encrypt_data.py 참고 (PBKDF2-SHA256 → AES-256-GCM, 본문은 gzip) */
+async function ybDecrypt(enc,pw){
+  const b=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+  const km=await crypto.subtle.importKey("raw",new TextEncoder().encode(pw),"PBKDF2",false,["deriveKey"]);
+  const key=await crypto.subtle.deriveKey({name:"PBKDF2",salt:b(enc.salt),iterations:enc.iter,hash:"SHA-256"},km,{name:"AES-GCM",length:256},false,["decrypt"]);
+  const gz=await crypto.subtle.decrypt({name:"AES-GCM",iv:b(enc.iv)},key,b(enc.ct));
+  return ybParse(await new Response(new Blob([gz]).stream().pipeThrough(new DecompressionStream("gzip"))).text());
+}
+function ybLock(enc){
+  const err=document.getElementById("err"),main=document.querySelector("main");
+  const open=db=>{window.DB=db;err.style.display="none";main.style.display="";YB_MAIN();};
+  const show=msg=>{main.style.display="none";err.style.display="block";
+    err.innerHTML=`<h2 style="font-size:16px;margin:0 0 8px">Yield Box</h2>
+      <p class="hint" style="margin:0 0 14px">비밀번호를 입력하세요.</p>
+      <form id="ybPwForm" class="row" style="gap:8px;justify-content:center">
+        <input type="password" id="ybPw" autocomplete="current-password" style="width:200px;padding:6px 8px" autofocus>
+        <button class="btn primary" type="submit">열기</button></form>
+      <label class="checks" style="display:inline-block;margin-top:10px"><label><input type="checkbox" id="ybPwKeep" checked> 이 기기에서 기억</label></label>
+      <p class="hint" id="ybMsg" style="margin:10px 0 0;color:var(--up)">${msg||""}</p>`;
+    document.getElementById("ybPw").focus();
+    document.getElementById("ybPwForm").onsubmit=async e=>{e.preventDefault();const pw=document.getElementById("ybPw").value,m=document.getElementById("ybMsg");
+      m.style.color="var(--muted)";m.textContent="여는 중…";
+      let db;try{db=await ybDecrypt(enc,pw);}catch(x){m.style.color="var(--up)";m.textContent="비밀번호가 맞지 않습니다.";return;}
+      try{if(document.getElementById("ybPwKeep").checked)localStorage.setItem("rdb:pw",pw);else localStorage.removeItem("rdb:pw");}catch(x){}
+      open(db);};};
+  let saved=null;try{saved=localStorage.getItem("rdb:pw");}catch(e){}
+  if(!saved){show();return;}
+  // 저장된 비밀번호로 먼저 시도, 바뀌었으면 다시 묻기
+  ybDecrypt(enc,saved).then(open,()=>{try{localStorage.removeItem("rdb:pw");}catch(e){}show("비밀번호가 바뀌었습니다. 다시 입력하세요.");});
+}
 (async()=>{
   // 테마는 데이터 불러오기 화면에도 먼저 적용 (기본 흰 바탕)
   try{document.documentElement.dataset.theme=JSON.parse(localStorage.getItem("rdb:theme2"))||"light";}catch(e){document.documentElement.dataset.theme="light";}
   if(window.DB){YB_MAIN();return;}
+  try{const r=await fetch("data.enc",{cache:"no-cache"});if(r.ok){ybLock(await r.json());return;}}catch(e){}
   try{const t=await YB_IDB.get("data");if(t){window.DB=ybParse(t);window.YB_FROM_IDB=true;YB_MAIN();ybShowDataBtn();return;}}catch(e){}
   ybLoader();
 })();
