@@ -1765,20 +1765,21 @@ function rtDecomp(g,T,bi){
   const Dc=(T-0.5)/(1+c0/100);o.sc=(c1-k1)*0.5;o.sr=Dc*(c1-c0)-Dk*(k1-k0);o.ex=o.sc+o.sr;o.tot=o.ks+o.ex;return o;}
 function drawRtB(){
   const bi=rtBi(),v=rt.v2;$$("#rtView2 button").forEach(b=>b.classList.toggle("on",b.dataset.v===v));
-  const f4=x=>x==null?"-":x.toFixed(4),sepOf=(g,r)=>r&&rtFam(g)!==rtFam(RT_GROUPS[r-1])?' class="gsep"':"";
+  // % 는 소수 3자리, 국고 롤·SP 캐리·SP 롤·크레딧 초과는 bp(소수 1자리)
+  const pc=x=>x==null?"-":x.toFixed(3),bq=x=>x==null?"-":(x*100).toFixed(1),sepOf=(g,r)=>r&&rtFam(g)!==rtFam(RT_GROUPS[r-1])?' class="gsep"':"";
   let h;
   if(v==="tot"||v==="ex"){
-    const key=v==="tot"?"tot":"ex";$("#rtBTitle").textContent=`6M ${v==="tot"?"총 보유수익":"크레딧 초과수익"} · 섹터 × 테너 (%)`;
+    const key=v==="tot"?"tot":"ex",f4=key==="tot"?pc:bq;$("#rtBTitle").textContent=`6M ${v==="tot"?"총 보유수익":"크레딧 초과수익"} · 섹터 × 테너 (${key==="tot"?"%":"bp"})`;
     const rows=RT_GROUPS.filter(g=>key==="tot"||g!=="국고채권"),M=rows.map(g=>RT_T.map(t=>{const o=rtDecomp(g,t,bi);return o?o[key]:null;}));
     const max=Math.max(...M.flat().filter(x=>x!=null).map(Math.abs),0.01);
     h=`<thead><tr><th>${DATES[bi]}</th>${RT_T.map(t=>`<th>${rtLab(t).replace("*","")}</th>`).join("")}</tr></thead><tbody>`;
     rows.forEach((g,r)=>{h+=`<tr${sepOf(g,r)}><td>${rdShort(g)}</td>${M[r].map(x=>`<td style="${x==null?"":heat(x,max,key==="ex")}">${f4(x)}</td>`).join("")}</tr>`;});
   }else{
-    const T=+v;$("#rtBTitle").textContent=`6M 보유수익 분해 · ${rtLab(T).replace("*",T>=4?" (보간)":"")} (%)`;
+    const T=+v;$("#rtBTitle").textContent=`6M 보유수익 분해 · ${rtLab(T).replace("*",T>=4?" (보간)":"")}`;
     const rows=RT_GROUPS.map(g=>[g,rtDecomp(g,T,bi)]),exs=rows.map(r=>r[1]&&r[1].ex).filter(x=>x!=null),mx=Math.max(...exs.map(Math.abs),0.01);
-    h=`<thead><tr><th>${DATES[bi]}</th><th>국고 캐리</th><th>국고 롤</th><th>국고 소계</th><th>SP 캐리</th><th>SP 롤</th><th>크레딧 초과</th><th>총 6M 수익</th><th>연환산</th></tr></thead><tbody>`;
-    rows.forEach(([g,o],r)=>{h+=`<tr${sepOf(g,r)}><td>${rdShort(g)}</td>${o?`<td>${f4(o.kc)}</td><td>${f4(o.kr)}</td><td>${f4(o.ks)}</td><td>${f4(o.sc)}</td><td class="${cls(o.sr)}">${f4(o.sr)}</td>
-      <td style="${o.ex==null?"":heat(o.ex,mx,true)}">${f4(o.ex)}</td><td><b>${f4(o.tot)}</b></td><td>${(o.tot*2).toFixed(2)}%</td>`:'<td colspan="8">-</td>'}</tr>`;});
+    h=`<thead><tr><th>${DATES[bi]}</th><th>국고 캐리(%)</th><th>국고 롤(bp)</th><th>국고 소계(%)</th><th>SP 캐리(bp)</th><th>SP 롤(bp)</th><th>크레딧 초과(bp)</th><th>총 6M 수익(%)</th><th>연환산</th></tr></thead><tbody>`;
+    rows.forEach(([g,o],r)=>{h+=`<tr${sepOf(g,r)}><td>${rdShort(g)}</td>${o?`<td>${pc(o.kc)}</td><td>${bq(o.kr)}</td><td>${pc(o.ks)}</td><td>${bq(o.sc)}</td><td class="${cls(o.sr)}">${bq(o.sr)}</td>
+      <td style="${o.ex==null?"":heat(o.ex,mx,true)}">${bq(o.ex)}</td><td><b>${pc(o.tot)}</b></td><td>${(o.tot*2).toFixed(2)}%</td>`:'<td colspan="8">-</td>'}</tr>`;});
   }
   $("#rtTblB").innerHTML=h+"</tbody>";
 }
