@@ -348,6 +348,20 @@ tr:hover td{background:var(--hover)}
       <p class="hint" style="margin:6px 0 0">실제 = 미국채 시장금리 · 모형 = ACM 무이표 적합금리 · 위험중립 = 앞으로 n년 단기금리 기대 평균 · 기간프리미엄(우축, bp) = 모형 − 위험중립.
         ACM은 뉴욕연준 추정치로 시장금리보다 며칠 늦게 갱신됩니다.</p>
     </div>
+    <div class="panel" id="kwPanel">
+      <div class="row" style="justify-content:space-between">
+        <h2 id="kwTitle">ACM vs Kim-Wright (연준 이사회)</h2>
+        <div class="row"><span><label class="lbl">만기</label><select id="kwMat"></select></span><div id="kwRange"></div></div>
+      </div>
+      <div class="tblwrap" style="max-height:none"><table id="kwTbl"></table></div>
+      <div class="usgrid" style="margin-top:10px">
+        <div><div class="hint" style="margin-bottom:4px">기간프리미엄 (bp)</div><div class="chart" id="kwTpChart"></div></div>
+        <div><div class="hint" style="margin-bottom:4px">위험중립 금리 (%)</div><div class="chart" id="kwRnChart"></div></div>
+      </div>
+      <p class="hint" style="margin:6px 0 0">Kim-Wright = 연준 이사회가 매일 공개하는 3요인 무차익 모형(feds200533). 국채금리에 더해 단기금리 설문 전망을 함께 맞춰,
+        정책 기대(위험중립)가 ACM보다 덜 출렁이고 커브 수준 변화가 기간프리미엄으로 더 많이 배분되는 편입니다. 위험중립 = 적합금리 − 기간프리미엄.
+        DKW(물가연동채까지 쓰는 확장판)는 정기 공개 데이터가 없어 KW를 씁니다.</p>
+    </div>
     <div class="usgrid">
       <div class="panel">
         <div class="row" style="justify-content:space-between">
@@ -392,8 +406,6 @@ tr:hover td{background:var(--hover)}
     <div class="panel tpuOne">
       <div class="row" style="justify-content:space-between"><h2>① 금리 변동 원인 분해 — 정책기대 vs 기간프리미엄</h2><span class="hint" id="tpuDecAsOf"></span></div>
       <div class="tblwrap" style="max-height:none"><table id="tpuDecTbl"></table></div>
-      <div class="row" style="justify-content:space-between;margin-top:12px"><span class="hint">선택 구간 시작일 대비 누적 변동(bp)</span><div id="tpuDecRange"></div></div>
-      <div class="chart" id="tpuDecChart" style="min-height:320px"></div>
       <p class="hint" style="margin:6px 0 0">실제 금리 변동 = 위험중립(정책금리 기대) 변동 + 기간프리미엄 변동 + 모형오차. 같은 상승이라도 프리미엄 주도(수급·재정·불확실성)인지 정책기대 주도인지 구분하는 용도입니다.</p>
     </div>
 
@@ -401,7 +413,7 @@ tr:hover td{background:var(--hover)}
       <div class="row" style="justify-content:space-between"><h2>② 밸류에이션 위치 — 기간프리미엄이 과거 대비 어디쯤인가</h2><span class="hint">2013년 이후 일별 기준</span></div>
       <div class="stat" id="tpuValStat"></div>
       <div class="chart" id="tpuValChart" style="min-height:320px;margin-top:10px"></div>
-      <p class="hint" style="margin:6px 0 0">배경 띠 = 평균 ±1σ·±2σ. 타이밍 신호보다는 듀레이션을 생각할 때 참고하는 배경 지표로 보세요 (실시간 검증에서 12개월 수익률 설명력은 낮았습니다).</p>
+      <p class="hint" style="margin:6px 0 0">왼쪽 축 = 기간프리미엄(bp), 오른쪽 축 = 같은 만기 금리와 위험중립 금리(%) — 둘의 차이가 대략 기간프리미엄입니다. 배경 띠 = 기간프리미엄 평균 ±1σ·±2σ. 타이밍 신호보다는 듀레이션을 생각할 때 참고하는 배경 지표로 보세요 (실시간 검증에서 12개월 수익률 설명력은 낮았습니다).</p>
     </div>
 
     <div class="panel tpuOne">
@@ -1788,6 +1800,7 @@ function drawUsCards(){
   const C=CTY[us.cty],P=us.cty==="KR"?"국고 ":"";
   const items=[[C.polLab,C.pol,"%"],[`${C.mktLab} 2Y`,C.mkt(2),"%"],[`${C.mktLab} 10Y`,C.mkt(10),"%"],
     ["10Y 위험중립 (ACM)",`${P}ACM 위험중립 10Y`,"%"],["10Y 기간프리미엄 (ACM)",`${P}ACM 기간프리미엄 10Y`,"bp"]];
+  if(us.cty==="US")items.push(["10Y 기간프리미엄 (Kim-Wright)","KW 기간프리미엄 10Y","bp"]);
   let h="";
   for(const [lab,n,u] of items){const s=BYNAME[n];if(!s)continue;const i=lastIdx(s),j=i>0?shiftIdx(i,"1D"):-1;
     let p=null;for(let k=i-1;k>=0;k--)if(s.v[k]!=null){p=s.v[k];break;}
@@ -1805,6 +1818,8 @@ function drawUsDec(){
   ls.push({label:`위험중립 ${n}Y`,color:PAL[2],x,y:ACM("RN",n).v,width:2});
   const FF=BYNAME[CTY[us.cty].pol];if(FF)ls.push({label:CTY[us.cty].polLab,color:PAL[8],x,y:FF.v,step:true,width:1.6});
   ls.push({label:`기간프리미엄 ${n}Y (bp, 우)`,color:PAL[3],x,y:ACM("TP",n).v.map(v=>v==null?null:+(v*100).toFixed(1)),width:1.8,y2:true});
+  const kw=us.cty==="US"?BYNAME[`KW 기간프리미엄 ${n}Y`]:null;
+  if(kw)ls.push({label:`Kim-Wright 기간프리미엄 ${n}Y (bp, 우)`,color:PAL[5],x,y:kw.v.map(v=>v==null?null:+(v*100).toFixed(1)),width:1.5,dash:[5,3],y2:true});
   tsChart("usDecChart",ls,{height:420,init:[TS[i0],TS[i1]]});
 }
 function drawUsCurve(){
@@ -1913,12 +1928,37 @@ function drawPath(c,P){
 }
 let ustSub=store.get("ustSub","main");
 $("#ustSub").onclick=e=>{const b=e.target.closest("button");if(!b)return;ustSub=b.dataset.v;store.set("ustSub",ustSub);renders.ust();};
+// ---------- ACM vs Kim-Wright (미국)
+const KW=(k,n)=>BYNAME[`KW ${ACM_LAB[k]} ${n}Y`];
+$("#kwMat").innerHTML=US_MATS.map(n=>`<option value="${n}">${n}Y</option>`).join("");
+if(!us.kwMat)us.kwMat=10;
+$("#kwMat").onchange=()=>{us.kwMat=+$("#kwMat").value;store.set("us",us);drawKw();};
+const kwRangeGet=rangeBar($("#kwRange"),"kw","5Y",()=>drawKw());
+function drawKw(){
+  const show=us.cty==="US"&&!!KW("TP",10);$("#kwPanel").style.display=show?"":"none";if(!show)return;
+  const n=us.kwMat;$("#kwMat").value=n;$("#kwTitle").textContent=`${n}Y ACM vs Kim-Wright (연준 이사회)`;
+  const [i0,i1]=kwRangeGet(),bp=s=>s?s.v.map(v=>v==null?null:+(v*100).toFixed(1)):null;
+  const aT=ACM("TP",n),kT=KW("TP",n),aR=ACM("RN",n),kR=KW("RN",n);
+  // 표: 현재 수준 + 기간별 변동(bp), 각 모형 자기 최신일 기준
+  const row=(lab,s,unit)=>{if(!s)return"";const i=lastIdx(s),c=valAt(s,i);
+    const ch=p=>{const j=shiftIdx(i,p),v=j>=0?valAt(s,j):null;return v==null?null:(c-v)*100;};
+    return `<tr><td style="text-align:left">${lab}</td><td>${unit==="bp"?(c*100).toFixed(1)+"bp":c.toFixed(3)+"%"}</td><td class="hint">${DATES[i].slice(5)}</td>${["WTD","MTD","QTD","YTD","1Y"].map(p=>{const v=ch(p);return `<td class="${cls(v)}">${fbp(v)}</td>`;}).join("")}</tr>`;};
+  $("#kwTbl").innerHTML=`<thead><tr><th style="text-align:left">${n}Y</th><th>현재</th><th>기준일</th><th>WTD</th><th>MTD</th><th>QTD</th><th>YTD</th><th>1Y</th></tr></thead><tbody>`
+    +row("기간프리미엄 · ACM",aT,"bp")+row("기간프리미엄 · KW",kT,"bp")+row("위험중립 · ACM",aR,"%")+row("위험중립 · KW",kR,"%")+"</tbody>";
+  const tl=[];if(aT)tl.push({label:"ACM",color:PAL[3],x:TS,y:bp(aT),width:1.8});if(kT)tl.push({label:"Kim-Wright",color:PAL[1],x:TS,y:bp(kT),width:1.8});
+  if(aT&&kT){const a=bp(aT),k=bp(kT);tl.push({label:"KW − ACM",color:PAL[8],x:TS,y:a.map((v,i)=>v==null||k[i]==null?null:+(k[i]-v).toFixed(1)),width:1.1,dash:[4,3]});}
+  tsChart("kwTpChart",tl,{unit:"bp",zero:true,height:300,init:[TS[i0],TS[i1]],sync:"kw"});
+  const rl=[];if(aR)rl.push({label:"ACM",color:PAL[2],x:TS,y:aR.v,width:1.8});if(kR)rl.push({label:"Kim-Wright",color:PAL[1],x:TS,y:kR.v,width:1.8});
+  const FF=BYNAME[CTY.US.pol];if(FF)rl.push({label:CTY.US.polLab,color:PAL[8],x:TS,y:FF.v,step:true,width:1.3});
+  tsChart("kwRnChart",rl,{height:300,init:[TS[i0],TS[i1]],sync:"kw"});
+}
 const renderUstMain=()=>{
   $$("#usCty button").forEach(b=>b.classList.toggle("on",b.dataset.c===us.cty));
   $("#usCtyNote").textContent=CTY[us.cty].note;
   drawUsCards();
   $("#usNoAcm").style.display=HAS_ACM()?"none":"";
   if(HAS_ACM()){drawUsDec();drawUsCurve();drawUsTable();}
+  drawKw();
   drawUsCmp();drawUsPath();
 };
 renders.ust=()=>{
@@ -1935,7 +1975,6 @@ let tpu=store.get("tpu",{cty:"ALL",mat:10});if(!tpu.v2){tpu.cty="ALL";tpu.v2=1;}
 $("#tpuMat").innerHTML=US_MATS.map(n=>`<option value="${n}">${n}Y</option>`).join("");
 $("#tpuCty").onclick=e=>{const b=e.target.closest("button");if(!b)return;tpu.cty=b.dataset.c;store.set("tpu",tpu);renders.tpu();};
 $("#tpuMat").onchange=()=>{tpu.mat=+$("#tpuMat").value;store.set("tpu",tpu);renders.tpu();};
-const tpuDecRangeGet=rangeBar($("#tpuDecRange"),"tpuDec","1Y",()=>drawTpuDecChart());
 const tpuCmpRangeGet=rangeBar($("#tpuCmpRange"),"tpuCmp","10Y",()=>drawTpuCmp());
 const T13=idxOnOrAfter("2013-01-01");
 function pctOf(arr,v){let n=0,le=0;for(let i=T13;i<arr.length;i++){const x=arr[i];if(x==null)continue;n++;if(x<=v)le++;}return n?le/n*100:null;}
@@ -1953,16 +1992,6 @@ function drawTpuDec(){
     const td=v=>`<td class="${cls(v)}">${fbp(v)}</td>`;
     h+=`<tr><td>${p}</td><td class="hint">${DATES[j]}</td>${td(ra)}${td(rn)}${td(tp)}<td class="hint">${fbp(res)}</td><td style="text-align:left">${lead}</td></tr>`;}
   $("#tpuDecTbl").innerHTML=h+"</tbody>";
-  drawTpuDecChart();
-}
-function drawTpuDecChart(){
-  const C=TPU[tpu.cty],n=tpu.mat,[i0,i1]=tpuDecRangeGet();
-  const cum=s=>{if(!s)return null;let b=null;for(let k=i0;k<=i1&&b==null;k++)b=s.v[k];return s.v.map(v=>v==null||b==null?null:+((v-b)*100).toFixed(1));};
-  const ls=[];const M=C.mkt(n);
-  if(M)ls.push({label:`실제 ${n}Y`,color:PAL[8],x:TS,y:cum(M),width:1.6});
-  ls.push({label:"정책기대(위험중립)",color:PAL[1],x:TS,y:cum(C.a("RN",n)),width:2});
-  ls.push({label:"기간프리미엄",color:PAL[0],x:TS,y:cum(C.a("TP",n)),width:2});
-  tsChart("tpuDecChart",ls,{unit:"bp",zero:true,height:320,init:[TS[i0],TS[i1]]});
 }
 
 // ② 밸류에이션 위치
@@ -1975,7 +2004,12 @@ function drawTpuVal(){
   const st=[["현재",cur.toFixed(1)+"bp"],["백분위",pct.toFixed(0)+"%"],["Z-score",((cur-mean)/sd).toFixed(2)],["평균",mean.toFixed(1)+"bp"],
     ["최고",`${mx.toFixed(0)}bp <span class="hint">${DATES[mxi].slice(2)}</span>`],["최저",`${mn.toFixed(0)}bp <span class="hint">${DATES[mni].slice(2)}</span>`],["1년 전 대비",y1==null?"-":fbp(cur-y1)+"bp"]];
   $("#tpuValStat").innerHTML=st.map(([k,v])=>`<div><span>${k}</span><b>${v}</b></div>`).join("");
-  tsChart("tpuValChart",[{label:`${C.lab} ${n}Y 기간프리미엄 (bp)`,color:PAL[0],x:TS,y:arr,width:1.9}],{unit:"bp",zero:true,height:320,bands:{mean,sd}});
+  // 오른쪽 축: 같은 만기 시장금리 (없는 만기는 ACM 모형금리)
+  const M=C.mkt(n)||C.a("Y",n),ml=C.mkt(n)?`${C.lab} ${n}Y 금리 (우, %)`:`ACM 모형금리 ${n}Y (우, %)`;
+  const ls=[{label:`${C.lab} ${n}Y 기간프리미엄 (bp)`,color:PAL[0],x:TS,y:arr,width:1.9}];
+  if(M)ls.push({label:ml,color:PAL[8],x:TS,y:M.v,width:1.4,y2:true});
+  const R=C.a("RN",n);if(R)ls.push({label:`위험중립 ${n}Y (우, %)`,color:PAL[1],x:TS,y:R.v,width:1.4,dash:[5,3],y2:true});
+  tsChart("tpuValChart",ls,{unit:"bp",zero:true,height:340,bands:{mean,sd},y2unit:"%"});
 }
 
 // ③ 신호판
