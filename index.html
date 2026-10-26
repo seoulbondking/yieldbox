@@ -851,9 +851,11 @@ function drawDashChart(){
 renders.dash=()=>{
   const ref=BYNAME["국고채권 3Y"]||S[0];const i=lastIdx(ref);
   $("#dashAsOf").textContent=`기준일 ${DATES[i]} · 1년 고/저는 최근 1년 범위`;
-  const cards=["기준금리","국고채권 3Y","국고채권 10Y","회사채AA- 3Y","CD 3M","IRS 3Y"].filter(n=>BYNAME[n]);
-  $("#dashCards").innerHTML=cards.map(n=>{const s=BYNAME[n];const c=valAt(s,i),p=valAt(s,i-1);const d=c!=null&&p!=null?(c-p)*100:null;
-    return `<div class="card"><div class="k">${n}</div><div class="v">${f3(c)}</div><div class="c ${cls(d)}">${d==null?"":(d>0?"▲ ":d<0?"▼ ":"")+fbp(d)+"bp"}</div></div>`;}).join("");
+  const cards=[["CD 3M","CD 3M"],["A1 CP 3M","CP 3M"],["국고채권 3Y","국고 3Y"],["국고채권 10Y","국고 10Y"],["회사채AA- 3Y","회사채 AA- 3Y"],["미국채 2Y","미국 2Y"],["미국채 10Y","미국 10Y"]].filter(([n])=>BYNAME[n]);
+  // 각 시리즈의 기준일 이전 마지막 값과 그 직전 값으로 일간 변동 (미국채는 날짜가 하루 늦을 수 있어 기준일 표시)
+  $("#dashCards").innerHTML=cards.map(([n,lab])=>{const s=BYNAME[n];let j=i;while(j>0&&s.v[j]==null)j--;let k=j-1;while(k>0&&s.v[k]==null)k--;
+    const c=s.v[j],p=k>=0?s.v[k]:null,d=c!=null&&p!=null?(c-p)*100:null;
+    return `<div class="card"><div class="k">${lab}</div><div class="v">${f3(c)}</div><div class="c ${cls(d)}">${d==null?"":(d>0?"▲ ":d<0?"▼ ":"")+fbp(d)+"bp"}${j!==i?` <span class="hint">${DATES[j].slice(5)}</span>`:""}</div></div>`;}).join("");
   let h=`<thead><tr><th>항목</th><th>현재</th>${PERIODS.map(p=>`<th>${p}</th>`).join("")}<th>1년 고</th><th>1년 저</th></tr></thead><tbody>`;
   for(const [g,names] of DASH_ROWS){let first=true;for(const n of names){const s=BYNAME[n];if(!s)continue;
     h+=`<tr class="${first?"sep":""}">${dashRow(n,k=>valAt(s,k),i,false)}</tr>`;first=false;}}
