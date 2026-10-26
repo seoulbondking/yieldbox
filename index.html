@@ -559,8 +559,14 @@ tr:hover td{background:var(--hover)}
       <div class="tblwrap" style="max-height:none;margin-top:10px"><table id="rtTblB" class="rtt"></table></div>
       <div id="rtTsWrap" style="display:none;margin-top:14px">
         <div class="row" style="justify-content:space-between"><h2 id="rtTsTitle"></h2><div id="rtTsRange"></div></div>
+        <div class="row" style="margin:4px 0">
+          <div class="seg" id="rtTsMode"><button data-m="bar" style="padding:2px 9px;font-size:11px">누적 막대</button><button data-m="line" style="padding:2px 9px;font-size:11px">선</button></div>
+          <label class="checks" id="rtTsKcWrap"><label><input type="checkbox" id="rtTsKc"> 국고 캐리 포함</label></label>
+        </div>
         <div class="hint" id="rtTsMeta" style="margin:2px 0 6px"></div>
         <div class="chart" id="rtTsChart"></div>
+        <div id="rtTsBarBox" style="position:relative"><div class="cmpmeta" id="rtTsLeg"></div><canvas id="rtTsCv" style="width:100%;height:340px;display:block"></canvas>
+          <div class="rdtip" id="rtTsTip" style="display:none;pointer-events:none"></div></div>
       </div>
       <p class="hint" style="margin:8px 0 0">커브 불변 가정, 6개월 보유. 국고 캐리 = y국고(T)×0.5, 국고 롤 = D×(y국고(T) − y국고(T−0.5)), D = (T−0.5)/(1+y(T−0.5)).
         SP 캐리 = (y크레딧(T) − y국고(T))×0.5, SP 롤 = D크레딧×Δy크레딧 − D국고×Δy국고. 크레딧 초과 = SP 캐리 + SP 롤, 총 = 국고 소계 + 크레딧 초과.</p>
@@ -1798,20 +1804,60 @@ function drawRtTs(){
   const w=$("#rtTsWrap");if(!rt.ts||!BYGROUP[rt.ts.g]){w.style.display="none";return;}w.style.display="";
   const {g,t:T}=rt.ts,base=g==="국고채권";
   $("#rtTsTitle").textContent=`${rdShort(g)} ${rtLab(T).replace("*",T>=4?" (보간)":"")} · 6M 수익 분해 일별 추이`;
-  const K=["kr","sc","sr","ex","tot","ks"],A=Object.fromEntries(K.map(k=>[k,new Array(N).fill(null)]));
+  const K=["kc","kr","sc","sr","ex","tot","ks"],A=Object.fromEntries(K.map(k=>[k,new Array(N).fill(null)]));
   for(const i of RD_IDX){const o=rtDecomp(g,T,i);if(!o)continue;for(const k of K)if(o[k]!=null)A[k][i]=+(k==="tot"||k==="ks"?o[k]:o[k]*100).toFixed(k==="tot"||k==="ks"?4:2);}
-  const ls=[{label:"국고 롤 (bp)",color:PAL[2],x:TS,y:A.kr,width:1.4}];
-  if(!base)ls.push({label:"SP 캐리 (bp)",color:PAL[5],x:TS,y:A.sc,width:1.4},{label:"SP 롤 (bp)",color:PAL[8],x:TS,y:A.sr,width:1.2,dash:[4,3]},
-    {label:"크레딧 초과 (bp)",color:PAL[0],x:TS,y:A.ex,width:2.2});
-  ls.push({label:"총 6M 수익 (우, %)",color:PAL[1],x:TS,y:A.tot,width:2,y2:true});
-  if(!base)ls.push({label:"국고 소계 (우, %)",color:PAL[9],x:TS,y:A.ks,width:1.2,dash:[5,4],y2:true});
-  const [i0,i1]=rtTsRangeGet();
-  tsChart("rtTsChart",ls,{unit:"bp",y2unit:"%",zero:true,height:340,init:[TS[i0],TS[i1]]});
+  const [i0,i1]=rtTsRangeGet(),bar=rt.tsMode!=="line";
+  $$("#rtTsMode button").forEach(b=>b.classList.toggle("on",(b.dataset.m==="bar")===bar));
+  $("#rtTsKc").checked=!!rt.tsKc;$("#rtTsKcWrap").style.display=bar?"":"none";
+  $("#rtTsChart").style.display=bar?"none":"";$("#rtTsBarBox").style.display=bar?"":"none";
+  if(bar){if(plots.rtTsChart){plots.rtTsChart.destroy();delete plots.rtTsChart;}drawRtTsBars(A,i0,i1,base);}
+  else{
+    const ls=[{label:"국고 롤 (bp)",color:PAL[2],x:TS,y:A.kr,width:1.4}];
+    if(!base)ls.push({label:"SP 캐리 (bp)",color:PAL[5],x:TS,y:A.sc,width:1.4},{label:"SP 롤 (bp)",color:PAL[8],x:TS,y:A.sr,width:1.2,dash:[4,3]},
+      {label:"크레딧 초과 (bp)",color:PAL[0],x:TS,y:A.ex,width:2.2});
+    ls.push({label:"총 6M 수익 (우, %)",color:PAL[1],x:TS,y:A.tot,width:2,y2:true});
+    if(!base)ls.push({label:"국고 소계 (우, %)",color:PAL[9],x:TS,y:A.ks,width:1.2,dash:[5,4],y2:true});
+    tsChart("rtTsChart",ls,{unit:"bp",y2unit:"%",zero:true,height:340,init:[TS[i0],TS[i1]]});
+  }
   // 요약: 현재 vs 차트 구간 평균
   const avg=a=>{let s=0,c=0;for(let i=i0;i<=i1;i++)if(a[i]!=null){s+=a[i];c++;}return c?s/c:null;},[cur]=lastVal(A.tot);
   const it=[["총 6M 수익",A.tot,"%"],["국고 소계",A.ks,"%"],...(base?[]:[["크레딧 초과",A.ex,"bp"]]),["국고 롤",A.kr,"bp"]];
   $("#rtTsMeta").innerHTML=it.map(([l,a,u])=>{const [v]=lastVal(a),m=avg(a);const f=x=>x==null?"-":u==="%"?x.toFixed(3)+"%":x.toFixed(1)+"bp";
     return `<span>${l} <b>${f(v)}</b> <span class="hint">구간 평균 ${f(m)}</span></span>`;}).join(" · ");
+}
+$("#rtTsMode").onclick=e=>{const b=e.target.closest("button");if(!b)return;rt.tsMode=b.dataset.m;rtSave();drawRtTs();};
+$("#rtTsKc").onchange=()=>{rt.tsKc=$("#rtTsKc").checked;rtSave();drawRtTs();};
+// 누적 막대: 구성요소(bp)를 양수는 위로, 음수는 아래로 쌓고, 합계를 점선으로. 날이 많으면 주·월 간격으로 표본
+function drawRtTsBars(A,i0,i1,base){
+  const cv=$("#rtTsCv"),tip=$("#rtTsTip");
+  const comps=[...(rt.tsKc?[["kc","국고 캐리",PAL[9]]]:[]),["kr","국고 롤",PAL[2]],...(base?[]:[["sc","SP 캐리",PAL[5]],["sr","SP 롤",PAL[3]]])];
+  let ix=[];for(let i=i0;i<=i1;i++)if(comps.some(([k])=>A[k][i]!=null))ix.push(i);
+  const step=Math.ceil(ix.length/180);if(step>1)ix=ix.filter((_,k)=>(ix.length-1-k)%step===0);
+  const sum=i=>comps.reduce((s,[k])=>s+(A[k][i]||0),0);
+  $("#rtTsLeg").innerHTML=comps.map(([,l,c])=>`<span><i style="background:${c};height:10px;width:10px"></i>${l}</span>`).join("")
+    +`<span><i style="background:none;border-top:2px dashed ${css("--fg")};height:0"></i>합계${rt.tsKc?" (= 총 6M 수익)":base?"":" (= 국고 롤 + 크레딧 초과)"}</span>`
+    +(step>1?`<span class="hint">${step}영업일 간격 표본</span>`:"");
+  const d=devicePixelRatio,W=cv.clientWidth,H=340;cv.width=W*d;cv.height=H*d;const c=cv.getContext("2d");c.scale(d,d);c.clearRect(0,0,W,H);
+  if(!ix.length){c.fillStyle=css("--muted");c.font="12px sans-serif";c.fillText("데이터가 없습니다",20,40);return;}
+  let mx=0,mn=0;for(const i of ix){let p=0,q=0;for(const [k] of comps){const v=A[k][i]||0;if(v>0)p+=v;else q+=v;}mx=Math.max(mx,p);mn=Math.min(mn,q);}
+  const rng=(mx-mn)||1,stp=[1,2,5,10,20,25,50,100].find(s=>rng/s<=7)||200,top=Math.ceil(mx/stp)*stp,bot=Math.floor(mn/stp)*stp;
+  const L=48,R=10,Tp=10,B=28,pw=W-L-R,ph=H-Tp-B,Y=v=>Tp+(top-v)/((top-bot)||1)*ph,bw=pw/ix.length;
+  c.font="11px Consolas,monospace";c.textBaseline="middle";
+  for(let t=bot;t<=top+1e-9;t+=stp){const y=Y(t);c.strokeStyle=css("--grid");c.lineWidth=1;c.beginPath();c.moveTo(L,y);c.lineTo(W-R,y);c.stroke();c.fillStyle=css("--axis");c.textAlign="right";c.fillText(String(+t.toFixed(1)),L-6,y);}
+  ix.forEach((i,k)=>{const x=L+k*bw,w=Math.max(1,bw*0.8);let p=0,q=0;
+    for(const [key,,col] of comps){const v=A[key][i];if(v==null||v===0)continue;c.fillStyle=col;
+      if(v>0){c.fillRect(x,Y(p+v),w,Y(p)-Y(p+v));p+=v;}else{c.fillRect(x,Y(q),w,Y(q+v)-Y(q));q+=v;}}});
+  c.strokeStyle=css("--fg");c.globalAlpha=.6;c.beginPath();c.moveTo(L,Y(0));c.lineTo(W-R,Y(0));c.stroke();c.globalAlpha=1;
+  c.strokeStyle=css("--fg");c.lineWidth=1.4;c.setLineDash([4,3]);c.beginPath();ix.forEach((i,k)=>{const x=L+(k+0.4)*bw,y=Y(sum(i));k?c.lineTo(x,y):c.moveTo(x,y);});c.stroke();c.setLineDash([]);
+  // x축: 월이 바뀌는 첫 막대에 라벨
+  c.fillStyle=css("--axis");c.textAlign="center";let lastX=-99;
+  ix.forEach((i,k)=>{const m=DATES[i].slice(0,7);if(k&&m===DATES[ix[k-1]].slice(0,7))return;const x=L+(k+0.4)*bw;if(x-lastX<44)return;lastX=x;
+    c.fillText(DATES[i].slice(5,7)==="01"||k===0?DATES[i].slice(2,7).replace("-","."):(+DATES[i].slice(5,7))+"월",x,H-B+14);});
+  cv.onmousemove=e=>{const r=cv.getBoundingClientRect(),k=Math.floor((e.clientX-r.left-L)/bw);if(k<0||k>=ix.length){tip.style.display="none";return;}const i=ix[k];
+    tip.innerHTML=`<b>${DATES[i]}</b><br>`+comps.map(([key,l,col])=>`<span style="color:${col}">■</span> ${l} ${A[key][i]==null?"-":A[key][i].toFixed(1)}bp`).join("<br>")
+      +`<br>합계 <b>${sum(i).toFixed(1)}bp</b><br><span class="hint">총 6M 수익 ${A.tot[i]==null?"-":A.tot[i].toFixed(3)+"%"}</span>`;
+    tip.style.display="block";let tx=e.clientX-r.left+14;if(tx+tip.offsetWidth>W)tx=e.clientX-r.left-tip.offsetWidth-14;tip.style.left=tx+"px";tip.style.top=(cv.offsetTop+e.clientY-r.top+20)+"px";};
+  cv.onmouseleave=()=>{tip.style.display="none";};
 }
 function drawRollTbl(){
   if(!$("#rtDate").value)$("#rtDate").value=DATES[RD_LAST];
