@@ -561,6 +561,7 @@ tr:hover td{background:var(--hover)}
         <div class="row" style="justify-content:space-between"><h2 id="rtTsTitle"></h2><div id="rtTsRange"></div></div>
         <div class="row" style="margin:4px 0">
           <div class="seg" id="rtTsMode"><button data-m="bar" style="padding:2px 9px;font-size:11px">누적 막대</button><button data-m="line" style="padding:2px 9px;font-size:11px">선</button></div>
+          <span id="rtTsBaseWrap"><label class="lbl">아래에 쌓을 항목</label><span class="seg" id="rtTsBase"><button data-b="rm" style="padding:2px 9px;font-size:11px">롤 마진</button><button data-b="sc" style="padding:2px 9px;font-size:11px">SP 캐리</button></span></span>
           <label class="checks" id="rtTsKcWrap"><label><input type="checkbox" id="rtTsKc"> 국고 캐리 포함</label></label>
         </div>
         <div class="hint" id="rtTsMeta" style="margin:2px 0 6px"></div>
@@ -1811,6 +1812,7 @@ function drawRtTs(){
   const [i0,i1]=rtTsRangeGet(),bar=rt.tsMode!=="line";
   $$("#rtTsMode button").forEach(b=>b.classList.toggle("on",(b.dataset.m==="bar")===bar));
   $("#rtTsKc").checked=!!rt.tsKc;$("#rtTsKcWrap").style.display=bar?"":"none";
+  $("#rtTsBaseWrap").style.display=bar&&!base?"":"none";$$("#rtTsBase button").forEach(b=>b.classList.toggle("on",b.dataset.b===(rt.tsBase||"rm")));
   $("#rtTsChart").style.display=bar?"none":"";$("#rtTsBarBox").style.display=bar?"":"none";
   if(bar){if(plots.rtTsChart){plots.rtTsChart.destroy();delete plots.rtTsChart;}drawRtTsBars(A,i0,i1,base);}
   else{
@@ -1828,10 +1830,13 @@ function drawRtTs(){
 }
 $("#rtTsMode").onclick=e=>{const b=e.target.closest("button");if(!b)return;rt.tsMode=b.dataset.m;rtSave();drawRtTs();};
 $("#rtTsKc").onchange=()=>{rt.tsKc=$("#rtTsKc").checked;rtSave();drawRtTs();};
+$("#rtTsBase").onclick=e=>{const b=e.target.closest("button");if(!b)return;rt.tsBase=b.dataset.b;rtSave();drawRtTs();};
 // 누적 막대: 구성요소(bp)를 양수는 위로, 음수는 아래로 쌓고, 합계를 점선으로. 날이 많으면 주·월 간격으로 표본
 function drawRtTsBars(A,i0,i1,base){
   const cv=$("#rtTsCv"),tip=$("#rtTsTip");
-  const comps=[...(rt.tsKc?[["kc","국고 캐리",PAL[9]]]:[]),["rm","롤 마진",PAL[2]],...(base?[]:[["sc","SP 캐리",PAL[5]]])];
+  // 쌓는 순서: 국고 캐리(포함 시) → 선택한 기준 항목 → 나머지
+  const crd=[["rm","롤 마진",PAL[2]],...(base?[]:[["sc","SP 캐리",PAL[5]]])];if(rt.tsBase==="sc")crd.reverse();
+  const comps=[...(rt.tsKc?[["kc","국고 캐리",PAL[9]]]:[]),...crd];
   let ix=[];for(let i=i0;i<=i1;i++)if(comps.some(([k])=>A[k][i]!=null))ix.push(i);
   const step=Math.ceil(ix.length/180);if(step>1)ix=ix.filter((_,k)=>(ix.length-1-k)%step===0);
   const sum=i=>comps.reduce((s,[k])=>s+(A[k][i]||0),0);
