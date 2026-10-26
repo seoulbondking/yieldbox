@@ -1806,22 +1806,23 @@ function drawRtTs(){
   $("#rtTsTitle").textContent=`${rdShort(g)} ${rtLab(T).replace("*",T>=4?" (보간)":"")} · 6M 수익 분해 일별 추이`;
   const K=["kc","kr","sc","sr","ex","tot","ks"],A=Object.fromEntries(K.map(k=>[k,new Array(N).fill(null)]));
   for(const i of RD_IDX){const o=rtDecomp(g,T,i);if(!o)continue;for(const k of K)if(o[k]!=null)A[k][i]=+(k==="tot"||k==="ks"?o[k]:o[k]*100).toFixed(k==="tot"||k==="ks"?4:2);}
+  // 롤 마진 = 국고 롤 + SP 롤 (= 크레딧 커브 자체의 롤, 국고채는 국고 롤)
+  A.rm=A.kr.map((v,i)=>v==null?null:+(v+(base?0:A.sr[i]||0)).toFixed(2));
   const [i0,i1]=rtTsRangeGet(),bar=rt.tsMode!=="line";
   $$("#rtTsMode button").forEach(b=>b.classList.toggle("on",(b.dataset.m==="bar")===bar));
   $("#rtTsKc").checked=!!rt.tsKc;$("#rtTsKcWrap").style.display=bar?"":"none";
   $("#rtTsChart").style.display=bar?"none":"";$("#rtTsBarBox").style.display=bar?"":"none";
   if(bar){if(plots.rtTsChart){plots.rtTsChart.destroy();delete plots.rtTsChart;}drawRtTsBars(A,i0,i1,base);}
   else{
-    const ls=[{label:"국고 롤 (bp)",color:PAL[2],x:TS,y:A.kr,width:1.4}];
-    if(!base)ls.push({label:"SP 캐리 (bp)",color:PAL[5],x:TS,y:A.sc,width:1.4},{label:"SP 롤 (bp)",color:PAL[8],x:TS,y:A.sr,width:1.2,dash:[4,3]},
-      {label:"크레딧 초과 (bp)",color:PAL[0],x:TS,y:A.ex,width:2.2});
+    const ls=[{label:"롤 마진 (bp)",color:PAL[2],x:TS,y:A.rm,width:1.6}];
+    if(!base)ls.push({label:"SP 캐리 (bp)",color:PAL[5],x:TS,y:A.sc,width:1.4},{label:"크레딧 초과 (bp)",color:PAL[0],x:TS,y:A.ex,width:2.2});
     ls.push({label:"총 6M 수익 (우, %)",color:PAL[1],x:TS,y:A.tot,width:2,y2:true});
     if(!base)ls.push({label:"국고 소계 (우, %)",color:PAL[9],x:TS,y:A.ks,width:1.2,dash:[5,4],y2:true});
     tsChart("rtTsChart",ls,{unit:"bp",y2unit:"%",zero:true,height:340,init:[TS[i0],TS[i1]]});
   }
   // 요약: 현재 vs 차트 구간 평균
   const avg=a=>{let s=0,c=0;for(let i=i0;i<=i1;i++)if(a[i]!=null){s+=a[i];c++;}return c?s/c:null;},[cur]=lastVal(A.tot);
-  const it=[["총 6M 수익",A.tot,"%"],["국고 소계",A.ks,"%"],...(base?[]:[["크레딧 초과",A.ex,"bp"]]),["국고 롤",A.kr,"bp"]];
+  const it=[["총 6M 수익",A.tot,"%"],["국고 소계",A.ks,"%"],["롤 마진",A.rm,"bp"],...(base?[]:[["SP 캐리",A.sc,"bp"]])];
   $("#rtTsMeta").innerHTML=it.map(([l,a,u])=>{const [v]=lastVal(a),m=avg(a);const f=x=>x==null?"-":u==="%"?x.toFixed(3)+"%":x.toFixed(1)+"bp";
     return `<span>${l} <b>${f(v)}</b> <span class="hint">구간 평균 ${f(m)}</span></span>`;}).join(" · ");
 }
@@ -1830,12 +1831,12 @@ $("#rtTsKc").onchange=()=>{rt.tsKc=$("#rtTsKc").checked;rtSave();drawRtTs();};
 // 누적 막대: 구성요소(bp)를 양수는 위로, 음수는 아래로 쌓고, 합계를 점선으로. 날이 많으면 주·월 간격으로 표본
 function drawRtTsBars(A,i0,i1,base){
   const cv=$("#rtTsCv"),tip=$("#rtTsTip");
-  const comps=[...(rt.tsKc?[["kc","국고 캐리",PAL[9]]]:[]),["kr","국고 롤",PAL[2]],...(base?[]:[["sc","SP 캐리",PAL[5]],["sr","SP 롤",PAL[3]]])];
+  const comps=[...(rt.tsKc?[["kc","국고 캐리",PAL[9]]]:[]),["rm","롤 마진",PAL[2]],...(base?[]:[["sc","SP 캐리",PAL[5]]])];
   let ix=[];for(let i=i0;i<=i1;i++)if(comps.some(([k])=>A[k][i]!=null))ix.push(i);
   const step=Math.ceil(ix.length/180);if(step>1)ix=ix.filter((_,k)=>(ix.length-1-k)%step===0);
   const sum=i=>comps.reduce((s,[k])=>s+(A[k][i]||0),0);
   $("#rtTsLeg").innerHTML=comps.map(([,l,c])=>`<span><i style="background:${c};height:10px;width:10px"></i>${l}</span>`).join("")
-    +`<span><i style="background:none;border-top:2px dashed ${css("--fg")};height:0"></i>합계${rt.tsKc?" (= 총 6M 수익)":base?"":" (= 국고 롤 + 크레딧 초과)"}</span>`
+    +`<span><i style="background:none;border-top:2px dashed ${css("--fg")};height:0"></i>합계${rt.tsKc?" (= 총 6M 수익)":base?"":" (= 롤 마진 + SP 캐리)"}</span>`
     +(step>1?`<span class="hint">${step}영업일 간격 표본</span>`:"");
   const d=devicePixelRatio,W=cv.clientWidth,H=340;cv.width=W*d;cv.height=H*d;const c=cv.getContext("2d");c.scale(d,d);c.clearRect(0,0,W,H);
   if(!ix.length){c.fillStyle=css("--muted");c.font="12px sans-serif";c.fillText("데이터가 없습니다",20,40);return;}
@@ -1855,6 +1856,7 @@ function drawRtTsBars(A,i0,i1,base){
     c.fillText(DATES[i].slice(5,7)==="01"||k===0?DATES[i].slice(2,7).replace("-","."):(+DATES[i].slice(5,7))+"월",x,H-B+14);});
   cv.onmousemove=e=>{const r=cv.getBoundingClientRect(),k=Math.floor((e.clientX-r.left-L)/bw);if(k<0||k>=ix.length){tip.style.display="none";return;}const i=ix[k];
     tip.innerHTML=`<b>${DATES[i]}</b><br>`+comps.map(([key,l,col])=>`<span style="color:${col}">■</span> ${l} ${A[key][i]==null?"-":A[key][i].toFixed(1)}bp`).join("<br>")
+      +(base?"":`<br><span class="hint">롤 마진 = 국고 롤 ${A.kr[i]==null?"-":A.kr[i].toFixed(1)} + SP 롤 ${A.sr[i]==null?"-":A.sr[i].toFixed(1)}</span>`)
       +`<br>합계 <b>${sum(i).toFixed(1)}bp</b><br><span class="hint">총 6M 수익 ${A.tot[i]==null?"-":A.tot[i].toFixed(3)+"%"}</span>`;
     tip.style.display="block";let tx=e.clientX-r.left+14;if(tx+tip.offsetWidth>W)tx=e.clientX-r.left-tip.offsetWidth-14;tip.style.left=tx+"px";tip.style.top=(cv.offsetTop+e.clientY-r.top+20)+"px";};
   cv.onmouseleave=()=>{tip.style.display="none";};
