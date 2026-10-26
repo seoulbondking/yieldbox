@@ -557,6 +557,11 @@ tr:hover td{background:var(--hover)}
         <div class="seg" id="rtView2"></div>
       </div>
       <div class="tblwrap" style="max-height:none;margin-top:10px"><table id="rtTblB" class="rtt"></table></div>
+      <div id="rtTsWrap" style="display:none;margin-top:14px">
+        <div class="row" style="justify-content:space-between"><h2 id="rtTsTitle"></h2><div id="rtTsRange"></div></div>
+        <div class="hint" id="rtTsMeta" style="margin:2px 0 6px"></div>
+        <div class="chart" id="rtTsChart"></div>
+      </div>
       <p class="hint" style="margin:8px 0 0">커브 불변 가정, 6개월 보유. 국고 캐리 = y국고(T)×0.5, 국고 롤 = D×(y국고(T) − y국고(T−0.5)), D = (T−0.5)/(1+y(T−0.5)).
         SP 캐리 = (y크레딧(T) − y국고(T))×0.5, SP 롤 = D크레딧×Δy크레딧 − D국고×Δy국고. 크레딧 초과 = SP 캐리 + SP 롤, 총 = 국고 소계 + 크레딧 초과.</p>
     </div>
@@ -1773,15 +1778,40 @@ function drawRtB(){
     const rows=RT_GROUPS.filter(g=>key==="tot"||g!=="국고채권"),M=rows.map(g=>RT_T.map(t=>{const o=rtDecomp(g,t,bi);return o?o[key]:null;}));
     const max=Math.max(...M.flat().filter(x=>x!=null).map(Math.abs),0.01);
     h=`<thead><tr><th>${DATES[bi]}</th>${RT_T.map(t=>`<th>${rtLab(t).replace("*","")}</th>`).join("")}</tr></thead><tbody>`;
-    rows.forEach((g,r)=>{h+=`<tr${sepOf(g,r)}><td>${rdShort(g)}</td>${M[r].map(x=>`<td style="${x==null?"":heat(x,max,key==="ex")}">${f4(x)}</td>`).join("")}</tr>`;});
+    rows.forEach((g,r)=>{h+=`<tr${sepOf(g,r)}><td>${rdShort(g)}</td>${M[r].map((x,k)=>`<td class="ck" data-g="${g}" data-t="${RT_T[k]}" style="${x==null?"":heat(x,max,key==="ex")}">${f4(x)}</td>`).join("")}</tr>`;});
   }else{
     const T=+v;$("#rtBTitle").textContent=`6M 보유수익 분해 · ${rtLab(T).replace("*",T>=4?" (보간)":"")}`;
     const rows=RT_GROUPS.map(g=>[g,rtDecomp(g,T,bi)]),exs=rows.map(r=>r[1]&&r[1].ex).filter(x=>x!=null),mx=Math.max(...exs.map(Math.abs),0.01);
     h=`<thead><tr><th>${DATES[bi]}</th><th>국고 캐리(%)</th><th>국고 롤(bp)</th><th>국고 소계(%)</th><th>SP 캐리(bp)</th><th>SP 롤(bp)</th><th>크레딧 초과(bp)</th><th>총 6M 수익(%)</th><th>연환산</th></tr></thead><tbody>`;
-    rows.forEach(([g,o],r)=>{h+=`<tr${sepOf(g,r)}><td>${rdShort(g)}</td>${o?`<td>${pc(o.kc)}</td><td>${bq(o.kr)}</td><td>${pc(o.ks)}</td><td>${bq(o.sc)}</td><td class="${cls(o.sr)}">${bq(o.sr)}</td>
+    rows.forEach(([g,o],r)=>{const on=rt.ts&&rt.ts.g===g&&rt.ts.t===T?";outline:1px solid var(--amber);outline-offset:-1px":"";
+      h+=`<tr${sepOf(g,r)} data-g="${g}" data-t="${T}" style="cursor:pointer${on}"><td>${rdShort(g)}</td>${o?`<td>${pc(o.kc)}</td><td>${bq(o.kr)}</td><td>${pc(o.ks)}</td><td>${bq(o.sc)}</td><td class="${cls(o.sr)}">${bq(o.sr)}</td>
       <td style="${o.ex==null?"":heat(o.ex,mx,true)}">${bq(o.ex)}</td><td><b>${pc(o.tot)}</b></td><td>${(o.tot*2).toFixed(2)}%</td>`:'<td colspan="8">-</td>'}</tr>`;});
   }
   $("#rtTblB").innerHTML=h+"</tbody>";
+  drawRtTs();
+}
+// 행·셀 클릭 → 그 섹터·테너의 6M 수익 분해 일별 추이
+$("#rtTblB").onclick=e=>{const c=e.target.closest("[data-g]");if(!c)return;rt.ts={g:c.dataset.g,t:+c.dataset.t};rtSave();drawRtB();
+  setTimeout(()=>$("#rtTsWrap").scrollIntoView({behavior:"smooth",block:"nearest"}),50);};
+const rtTsRangeGet=rangeBar($("#rtTsRange"),"rtTs","1Y",()=>drawRtTs());
+function drawRtTs(){
+  const w=$("#rtTsWrap");if(!rt.ts||!BYGROUP[rt.ts.g]){w.style.display="none";return;}w.style.display="";
+  const {g,t:T}=rt.ts,base=g==="국고채권";
+  $("#rtTsTitle").textContent=`${rdShort(g)} ${rtLab(T).replace("*",T>=4?" (보간)":"")} · 6M 수익 분해 일별 추이`;
+  const K=["kr","sc","sr","ex","tot","ks"],A=Object.fromEntries(K.map(k=>[k,new Array(N).fill(null)]));
+  for(const i of RD_IDX){const o=rtDecomp(g,T,i);if(!o)continue;for(const k of K)if(o[k]!=null)A[k][i]=+(k==="tot"||k==="ks"?o[k]:o[k]*100).toFixed(k==="tot"||k==="ks"?4:2);}
+  const ls=[{label:"국고 롤 (bp)",color:PAL[2],x:TS,y:A.kr,width:1.4}];
+  if(!base)ls.push({label:"SP 캐리 (bp)",color:PAL[5],x:TS,y:A.sc,width:1.4},{label:"SP 롤 (bp)",color:PAL[8],x:TS,y:A.sr,width:1.2,dash:[4,3]},
+    {label:"크레딧 초과 (bp)",color:PAL[0],x:TS,y:A.ex,width:2.2});
+  ls.push({label:"총 6M 수익 (우, %)",color:PAL[1],x:TS,y:A.tot,width:2,y2:true});
+  if(!base)ls.push({label:"국고 소계 (우, %)",color:PAL[9],x:TS,y:A.ks,width:1.2,dash:[5,4],y2:true});
+  const [i0,i1]=rtTsRangeGet();
+  tsChart("rtTsChart",ls,{unit:"bp",y2unit:"%",zero:true,height:340,init:[TS[i0],TS[i1]]});
+  // 요약: 현재 vs 차트 구간 평균
+  const avg=a=>{let s=0,c=0;for(let i=i0;i<=i1;i++)if(a[i]!=null){s+=a[i];c++;}return c?s/c:null;},[cur]=lastVal(A.tot);
+  const it=[["총 6M 수익",A.tot,"%"],["국고 소계",A.ks,"%"],...(base?[]:[["크레딧 초과",A.ex,"bp"]]),["국고 롤",A.kr,"bp"]];
+  $("#rtTsMeta").innerHTML=it.map(([l,a,u])=>{const [v]=lastVal(a),m=avg(a);const f=x=>x==null?"-":u==="%"?x.toFixed(3)+"%":x.toFixed(1)+"bp";
+    return `<span>${l} <b>${f(v)}</b> <span class="hint">구간 평균 ${f(m)}</span></span>`;}).join(" · ");
 }
 function drawRollTbl(){
   if(!$("#rtDate").value)$("#rtDate").value=DATES[RD_LAST];
