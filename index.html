@@ -215,6 +215,10 @@ tr:hover td{background:var(--hover)}
       <div class="row" style="justify-content:space-between"><h2>국고 3Y·10Y · 기준금리 · 10Y−3Y 스프레드</h2><div id="dashRange"></div></div>
       <div class="chart" id="dashChart"></div>
     </div>
+    <div class="panel">
+      <div class="row" style="justify-content:space-between"><h2>미국채 2Y·10Y · 미국 기준금리 · 10Y−2Y 스프레드</h2><span class="hint">기간은 위 차트와 같이 움직입니다</span></div>
+      <div class="chart" id="dashChartUS"></div>
+    </div>
   </section>
 
   <!-- 시계열 -->
@@ -840,13 +844,17 @@ function dashRow(label,fn,i,isBp){
 const dashRangeGet=rangeBar($("#dashRange"),"dash","3Y",()=>drawDashChart());
 function drawDashChart(){
   const [i0,i1]=dashRangeGet();const x=TS;
-  const ls=[["국고채권 3Y",PAL[0]],["국고채권 10Y",PAL[1]],["기준금리",PAL[8],true]].filter(([n])=>BYNAME[n])
-    .map(([n,c,step])=>({label:n,color:c,x,y:BYNAME[n].v,step,width:step?2:1.6}));
-  // 국고 10Y − 3Y (bp) 를 오른쪽 보조축으로
-  const K3=BYNAME["국고채권 3Y"],K10=BYNAME["국고채권 10Y"];
-  if(K3&&K10)ls.push({label:"10Y−3Y (bp, 우)",color:PAL[3],width:1.4,y2:true,x,
-    y:K10.v.map((v,i)=>v==null||K3.v[i]==null?null:+((v-K3.v[i])*100).toFixed(2))});
-  tsChart("dashChart",ls,{init:[TS[i0],TS[i1]]});
+  // 단기·장기 금리 + 기준금리, 장기−단기 (bp) 를 오른쪽 보조축으로. 한국·미국 두 차트는 확대·축소 연동
+  const one=(id,sh,lo,pol,lab)=>{
+    const ls=[[sh,PAL[0]],[lo,PAL[1]],[pol,PAL[8],true]].filter(([n])=>BYNAME[n])
+      .map(([n,c,step])=>({label:n,color:c,x,y:BYNAME[n].v,step,width:step?2:1.6}));
+    const A=BYNAME[sh],B=BYNAME[lo];
+    if(A&&B)ls.push({label:lab+" (bp, 우)",color:PAL[3],width:1.4,y2:true,x,
+      y:B.v.map((v,i)=>v==null||A.v[i]==null?null:+((v-A.v[i])*100).toFixed(2))});
+    if(ls.length)tsChart(id,ls,{init:[TS[i0],TS[i1]],sync:"dash"});
+  };
+  one("dashChart","국고채권 3Y","국고채권 10Y","기준금리","10Y−3Y");
+  one("dashChartUS","미국채 2Y","미국채 10Y","미국 기준금리","10Y−2Y");
 }
 renders.dash=()=>{
   const ref=BYNAME["국고채권 3Y"]||S[0];const i=lastIdx(ref);
