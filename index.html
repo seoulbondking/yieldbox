@@ -98,6 +98,8 @@ td.heat{color:var(--fg)}
 .rdgrid{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:14px;align-items:start}
 @media (max-width:1000px){.rdgrid{grid-template-columns:1fr}}
 #rdChart{position:relative}
+.rtTop{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:start}
+@media(max-width:1250px){.rtTop{grid-template-columns:minmax(0,1fr)}}
 .rdtip{position:absolute;pointer-events:none;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 9px;font-size:12px;line-height:1.5;box-shadow:0 2px 8px rgba(0,0,0,.12);white-space:nowrap;z-index:3}
 .rdleg{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--muted);margin-top:6px}
 .rdleg span{display:inline-flex;align-items:center;gap:6px}.rdleg i{display:inline-block;width:18px;height:3px;border-radius:2px}
@@ -537,6 +539,28 @@ tr:hover td{background:var(--hover)}
   <section class="tab" id="tab-roll">
     <div class="seg" id="rdSub" style="margin-bottom:12px"><button data-v="calc">계산기</button><button data-v="tbl">섹터 롤 표</button></div>
     <div id="rtView" style="display:none">
+    <div class="rtTop">
+    <div class="panel">
+      <div class="row" style="justify-content:space-between">
+        <h2 id="rtCvTitle">커브 · 6M 롤마진</h2>
+        <div class="row">
+          <span><label class="lbl">섹터</label><select id="rtCvG"></select></span>
+          <span><label class="lbl">막대</label><span class="seg" id="rtCvM"><button data-v="rm" style="padding:2px 9px;font-size:11px">롤마진</button><button data-v="eff" style="padding:2px 9px;font-size:11px">롤 효과</button><button data-v="hold" style="padding:2px 9px;font-size:11px">6M 보유수익</button></span></span>
+          <span><label class="lbl">평균·σ 기간</label><span class="seg" id="rtCvSt"></span></span>
+          <label class="checks"><label><input type="checkbox" id="rtCvPrev"> 1개월 전 커브</label><label><input type="checkbox" id="rtCvK"> 국고 롤마진 나란히</label></label>
+        </div>
+      </div>
+      <div id="rtCvBox" style="position:relative;margin-top:6px">
+        <div class="cmpmeta" id="rtCvLeg"></div>
+        <canvas id="rtCvA" style="width:100%;height:300px;display:block"></canvas>
+        <div class="cmpmeta" id="rtCvLeg2" style="margin-top:10px"></div>
+        <canvas id="rtCvB" style="width:100%;height:300px;display:block"></canvas>
+        <div class="rdtip" id="rtCvTip" style="display:none"></div>
+      </div>
+      <p class="hint" style="margin:8px 0 0">위: 기준일 금리 커브. 테너마다 세로 막대 길이가 6개월 뒤 굴러 내려가는 폭(롤마진 = y(T) − y(T−6M))이고, 옅은 삼각형은 T−6M 에서 T 까지의 커브 구간입니다.
+        아래: 같은 롤마진을 bp 막대로 표시. 롤 효과 = 롤마진 × D, D = (T−0.5)/(1+y(T−0.5)) 로 6개월 뒤 남은 듀레이션만큼 실제 가격 이익으로 바꾼 값(bp, 아래 6M 보유수익 분해의 롤과 같은 식). 6M 보유수익(%) = 캐리 y(T)×0.5 + 롤 효과, 막대는 캐리(아래)와 롤 효과(위)를 쌓은 것. 점 = 선택한 기간의 평균, 세로선 = 평균 ±1σ (통계 시작·제외 기간은 아래 표 설정과 같음). 4Y·5Y 는 3.5Y·4.5Y 보간.
+        아래 표에서 섹터 이름을 누르면 이 그림이 그 섹터로 바뀝니다.</p>
+    </div>
     <div class="panel">
       <div class="row" style="justify-content:space-between">
         <h2>6M 롤마진 · 섹터 × 테너 (bp)</h2>
@@ -553,15 +577,13 @@ tr:hover td{background:var(--hover)}
       <div class="tblwrap" style="max-height:none;margin-top:10px"><table id="rtTblA" class="rtt"></table></div>
       <p class="hint" style="margin:8px 0 0">롤마진 = y(T) − y(T−6M). 9M 은 9M−3M, 4Y·5Y 는 3.5Y·4.5Y 를 양옆 만기 직선보간(4Y* = y4 − (y3+y4)/2).
         모든 통계는 통계 시작일 ~ 기준일 중 제외 기간을 뺀 영업일로 계산합니다. 1Y·3Y 평균은 기준일 직전 12·36개월, 전기간 평균·백분위는 그 전체 구간입니다.
-        z(1Y)·z(3Y) = (현재 − 평균)/σ, 평균·σ 는 각각 직전 12·36개월 (σ 는 모표준편차, 셀에 마우스를 올리면 표시). 셀을 누르면 계산기의 BEP 로 이동합니다.</p>
+        z(1Y)·z(3Y) = (현재 − 평균)/σ, 평균·σ 는 각각 직전 12·36개월 (σ 는 모표준편차, 셀에 마우스를 올리면 표시). 셀을 누르면 왼쪽 커브 그림, 아래 6M 보유수익 분해(그 테너)와 일별 추이가 그 섹터·테너로 바뀝니다.</p>
     </div>
+    </div>
+    <div class="rtTop">
     <div class="panel">
-      <div class="row" style="justify-content:space-between">
-        <h2 id="rtBTitle">6M 보유수익 분해 (%)</h2>
-        <div class="seg" id="rtView2"></div>
-      </div>
-      <div class="tblwrap" style="max-height:none;margin-top:10px"><table id="rtTblB" class="rtt"></table></div>
-      <div id="rtTsWrap" style="display:none;margin-top:14px">
+      <div id="rtTsEmpty" class="hint" style="padding:40px 8px;text-align:center">오른쪽 6M 보유수익 분해 표에서 행(또는 칸)을 누르면 그 섹터·테너의 일별 추이가 여기에 표시됩니다.</div>
+      <div id="rtTsWrap" style="display:none">
         <div class="row" style="justify-content:space-between"><h2 id="rtTsTitle"></h2><div id="rtTsRange"></div></div>
         <div class="row" style="margin:4px 0">
           <div class="seg" id="rtTsMode"><button data-m="bar" style="padding:2px 9px;font-size:11px">누적 막대</button><button data-m="line" style="padding:2px 9px;font-size:11px">선</button></div>
@@ -573,8 +595,16 @@ tr:hover td{background:var(--hover)}
         <div id="rtTsBarBox" style="position:relative"><div class="cmpmeta" id="rtTsLeg"></div><canvas id="rtTsCv" style="width:100%;height:340px;display:block"></canvas>
           <div class="rdtip" id="rtTsTip" style="display:none;pointer-events:none"></div></div>
       </div>
+    </div>
+    <div class="panel">
+      <div class="row" style="justify-content:space-between">
+        <h2 id="rtBTitle">6M 보유수익 분해 (%)</h2>
+        <div class="seg" id="rtView2"></div>
+      </div>
+      <div class="tblwrap" style="max-height:none;margin-top:10px"><table id="rtTblB" class="rtt"></table></div>
       <p class="hint" style="margin:8px 0 0">커브 불변 가정, 6개월 보유. 국고 캐리 = y국고(T)×0.5, 국고 롤 = D×(y국고(T) − y국고(T−0.5)), D = (T−0.5)/(1+y(T−0.5)).
         SP 캐리 = (y크레딧(T) − y국고(T))×0.5, SP 롤 = D크레딧×Δy크레딧 − D국고×Δy국고. 크레딧 초과 = SP 캐리 + SP 롤, 총 = 국고 소계 + 크레딧 초과.</p>
+    </div>
     </div>
     </div>
     <div id="rdCalcView">
@@ -1761,7 +1791,7 @@ $("#rtView2").onclick=e=>{const b=e.target.closest("button");if(!b)return;rt.v2=
 $("#rtDate").min=DATES[RD_IDX[0]];$("#rtDate").max=DATES[RD_LAST];
 $("#rtDate").onchange=()=>drawRollTbl();
 $("#rtSt").onchange=$("#rtExA").onchange=$("#rtExB").onchange=$("#rtExOn").onchange=()=>{
-  rt.st=$("#rtSt").value||"2013-01-01";rt.exA=$("#rtExA").value;rt.exB=$("#rtExB").value;rt.exOn=$("#rtExOn").checked;rtSave();drawRtA();};
+  rt.st=$("#rtSt").value||"2013-01-01";rt.exA=$("#rtExA").value;rt.exB=$("#rtExB").value;rt.exOn=$("#rtExOn").checked;rtSave();drawRtA();drawRtCv();};
 const rtBi=()=>rdSnap($("#rtDate").value||DATES[RD_LAST]);
 function drawRtA(){
   const bi=rtBi(),v=rt.v1;$$("#rtView1 button").forEach(b=>b.classList.toggle("on",b.dataset.v===v));
@@ -1772,9 +1802,9 @@ function drawRtA(){
   const hs=x=>x==null?"":v==="s3"?heat(x,max,false):heat(v==="pct"?x-50:x,max,true);
   let h=`<thead><tr><th>${DATES[bi]}</th>${RT_T.map(t=>`<th>${rtLab(t)}</th>`).join("")}</tr></thead><tbody>`;
   RT_GROUPS.forEach((g,r)=>{const sep=r&&rtFam(g)!==rtFam(RT_GROUPS[r-1])?' class="gsep"':"";
-    h+=`<tr${sep}><td>${rdShort(g)}</td>${M[r].map((c,k)=>{const x=val(c);
+    h+=`<tr${sep}><td data-cv="${g}" title="커브 그림에 표시" style="cursor:pointer${g===rt.cv?";color:var(--amber);font-weight:600":""}">${rdShort(g)}</td>${M[r].map((c,k)=>{const x=val(c);
       const tip=c?`${rdShort(g)} ${rtLab(RT_T[k])} · 현재 ${c.cur==null?"-":c.cur.toFixed(1)} · 1Y ${c.m1==null?"-":c.m1.toFixed(1)} (σ ${c.s1==null?"-":c.s1.toFixed(1)}) · 3Y ${c.m3==null?"-":c.m3.toFixed(1)} (σ ${c.s3==null?"-":c.s3.toFixed(1)}) · 전기간 ${c.mAll==null?"-":c.mAll.toFixed(1)} · ${c.pct==null?"-":c.pct.toFixed(0)}%ile · n=${c.n}`:"";
-      return `<td class="ck" data-g="${g}" data-t="${RT_T[k]}" title="${tip}" style="${hs(x)}">${fmt(x)}</td>`;}).join("")}</tr>`;});
+      return `<td class="ck" data-g="${g}" data-t="${RT_T[k]}" title="${tip}" style="${hs(x)}${rt.ts&&rt.ts.g===g&&rt.ts.t===RT_T[k]?";outline:2px solid var(--amber);outline-offset:-2px":""}">${fmt(x)}</td>`;}).join("")}</tr>`;});
   $("#rtTblA").innerHTML=h+"</tbody>";
 }
 // 6M 보유수익 분해: D = (T−0.5)/(1+y(T−0.5)/100)
@@ -1812,7 +1842,7 @@ $("#rtTblB").onclick=e=>{const c=e.target.closest("[data-g]");if(!c)return;rt.ts
   setTimeout(()=>$("#rtTsWrap").scrollIntoView({behavior:"smooth",block:"nearest"}),50);};
 const rtTsRangeGet=rangeBar($("#rtTsRange"),"rtTs","1Y",()=>drawRtTs());
 function drawRtTs(){
-  const w=$("#rtTsWrap");if(!rt.ts||!BYGROUP[rt.ts.g]){w.style.display="none";return;}w.style.display="";
+  const w=$("#rtTsWrap"),none=!rt.ts||!BYGROUP[rt.ts.g];$("#rtTsEmpty").style.display=none?"":"none";if(none){w.style.display="none";return;}w.style.display="";
   const {g,t:T}=rt.ts,base=g==="국고채권";
   $("#rtTsTitle").textContent=`${rdShort(g)} ${rtLab(T).replace("*",T>=4?" (보간)":"")} · 6M 수익 분해 일별 추이`;
   const K=["kc","kr","sc","sr","ex","tot","ks"],A=Object.fromEntries(K.map(k=>[k,new Array(N).fill(null)]));
@@ -1876,15 +1906,133 @@ function drawRtTsBars(A,i0,i1,base){
     tip.style.display="block";let tx=e.clientX-r.left+14;if(tx+tip.offsetWidth>W)tx=e.clientX-r.left-tip.offsetWidth-14;tip.style.left=tx+"px";tip.style.top=(cv.offsetTop+e.clientY-r.top+20)+"px";};
   cv.onmouseleave=()=>{tip.style.display="none";};
 }
+// ---------- 섹터 롤 표 › 커브 + 테너별 롤마진 그림 (두 캔버스 x축 = 만기, 같은 눈금)
+const RT_X1=5.25,RT_CV_ST=[["1","1Y"],["3","3Y"],["All","전기간"]];
+if(!rt.cv)rt.cv=BYGROUP["회사채AA-"]?"회사채AA-":RT_GROUPS[0];if(!rt.cvSt)rt.cvSt="1";
+$("#rtCvG").innerHTML=RT_GROUPS.map(g=>`<option value="${g}">${rdShort(g)}</option>`).join("");
+$("#rtCvSt").innerHTML=RT_CV_ST.map(([k,l])=>`<button data-v="${k}" style="padding:2px 9px;font-size:11px">${l}</button>`).join("");
+$("#rtCvG").onchange=()=>{rt.cv=$("#rtCvG").value;rtSave();drawRtA();drawRtCv();};
+$("#rtCvSt").onclick=e=>{const b=e.target.closest("button");if(!b)return;rt.cvSt=b.dataset.v;rtSave();drawRtCv();};
+$("#rtCvM").onclick=e=>{const b=e.target.closest("button");if(!b)return;rt.cvM=b.dataset.v;rtSave();drawRtCv();};
+// 롤 효과(bp) = 롤마진 × D, D = (T−0.5)/(1+y(T−0.5)/100)
+const rtEffC={};
+function rtEff(g,t){const k=g+"|"+t;if(k in rtEffC)return rtEffC[k];const R=rtRoll(g,t),B=rtSer(g,t-0.5);
+  return rtEffC[k]=R&&B?R.map((r,i)=>r==null||B[i]==null?null:r*(t-0.5)/(1+B[i]/100)):null;}
+// 6M 보유수익(%) = 캐리 y(T)×0.5 + 롤 효과
+const rtHoldC={};
+function rtHold(g,t){const k=g+"|"+t;if(k in rtHoldC)return rtHoldC[k];const A=rtSer(g,t),E=rtEff(g,t);
+  return rtHoldC[k]=A&&E?A.map((a,i)=>a==null||E[i]==null?null:a*0.5+E[i]/100):null;}
+$("#rtCvPrev").onchange=()=>{rt.cvPrev=$("#rtCvPrev").checked;rtSave();drawRtCv();};
+$("#rtCvK").onchange=()=>{rt.cvK=$("#rtCvK").checked;rtSave();drawRtCv();};
+const rtCurve=(g,i)=>(BYGROUP[g]||[]).filter(s=>s.years!=null&&s.years>0&&s.years<=RT_X1&&s.v[i]!=null).sort((a,b)=>a.years-b.years).map(s=>[s.years,s.v[i]]);
+const rtNice=(rng,c)=>c.find(s=>rng/s<=6)||c[c.length-1];
+let rtCvHov=-1,rtCvD=null;
+function drawRtCv(){
+  if(!BYGROUP[rt.cv])rt.cv=RT_GROUPS[0];
+  const g=rt.cv,K="국고채권",isK=g===K,bi=rtBi(),pi=rdSnap(rtEdate(DATES[bi],-1)),st=rt.cvSt,stl=RT_CV_ST.find(x=>x[0]===st)[1];
+  $("#rtCvG").value=g;$("#rtCvPrev").checked=!!rt.cvPrev;$("#rtCvK").checked=!!rt.cvK;$("#rtCvK").parentElement.style.display=isK?"none":"";
+  $$("#rtCvSt button").forEach(b=>b.classList.toggle("on",b.dataset.v===st));
+  const md=["eff","hold"].includes(rt.cvM)?rt.cvM:"rm",ser={rm:rtRoll,eff:rtEff,hold:rtHold}[md],ml={rm:"롤마진",eff:"롤 효과",hold:"6M 보유수익"}[md];$$("#rtCvM button").forEach(b=>b.classList.toggle("on",b.dataset.v===md));
+  $("#rtCvTitle").textContent=`커브 · 6M 롤마진 · ${rdShort(g)} · ${DATES[bi]}`;
+  const yAt=(gg,t)=>{const a=rtSer(gg,t);return a?a[bi]:null;},sm=a=>{if(!a)return null;const o=rtStats(a,bi);return {cur:o.cur,m:o["m"+st],s:o["s"+st]};};
+  const rows=RT_T.map(t=>{const y1=yAt(g,t),y0=yAt(g,t-0.5),ok=y1!=null&&y0!=null,rm=ok?(y1-y0)*100:null,ef=ok?rm*(t-0.5)/(1+y0/100):null,kE=!isK&&rt.cvK?rtEff(K,t):null;
+    return {t,y1,y0,rm,ef,cy:y1==null?null:y1*0.5,tot:ok?y1*0.5+ef/100:null,kef:kE?kE[bi]:null,c:sm(ser(g,t)),k:!isK&&rt.cvK?sm(ser(K,t)):null};});
+  rtCvD={g,isK,bi,pi,stl,ml,md,rows,cur:rtCurve(g,bi),kc:isK?[]:rtCurve(K,bi),pc:rt.cvPrev?rtCurve(g,pi):[]};
+  const cS=PAL[1],cR=PAL[2],cC=PAL[9];
+  $("#rtCvLeg").innerHTML=`<span><i style="background:${cS}"></i>${rdShort(g)} ${DATES[bi]}</span>`
+    +(rt.cvPrev?`<span><i style="background:none;border-top:2px dashed ${cS};height:0"></i>${rdShort(g)} ${DATES[pi]}</span>`:"")
+    +(isK?"":`<span><i style="background:${css("--muted")}"></i>국고</span>`)+`<span><i style="background:${cR};width:4px;height:12px"></i>롤마진 (6M 내려가는 폭)</span><span class="hint">금리 %</span>`;
+  $("#rtCvLeg2").innerHTML=(md==="hold"?`<span><i style="background:${cC};height:10px;width:10px"></i>${rdShort(g)} 캐리</span><span><i style="background:${cR};height:10px;width:10px"></i>롤 효과</span>`
+      :md==="rm"?`<span><i style="background:${cR};opacity:.35;height:10px;width:10px"></i>${rdShort(g)} 롤마진</span><span><i style="background:${cR};height:10px;width:10px"></i>롤 효과 (= 롤마진 × 남은 듀레이션)</span>`
+      :`<span><i style="background:${cR};height:10px;width:10px"></i>${rdShort(g)} ${ml}</span>`)
+    +(rows.some(r=>r.k)?`<span><i style="background:${css("--muted")};height:10px;width:10px"></i>국고 ${ml}</span>`:"")
+    +(md==="hold"?"":`<span><i style="background:${cC}"></i>캐리 (%, 우축)</span>`)
+    +`<span><i style="background:none;border:2px solid ${css("--fg")};width:6px;height:6px;border-radius:50%"></i>${stl} 평균 ±1σ${md==="hold"?" (6M 보유수익)":""}</span><span class="hint">${md==="hold"?"%, 6개월 기간 수익 · 막대 = 캐리 + 롤 효과":"bp"}</span>`;
+  rtCvDraw();
+}
+function rtCvDraw(){
+  const D=rtCvD;if(!D)return;const cS=PAL[1],cR=PAL[2],cC=PAL[9],hd=D.md==="hold",fg=css("--fg"),mu=css("--muted"),ax=css("--axis"),gr=css("--grid"),dpr=devicePixelRatio;
+  const setup=(cv,H)=>{const W=cv.clientWidth;cv.width=W*dpr;cv.height=H*dpr;const c=cv.getContext("2d");c.scale(dpr,dpr);c.clearRect(0,0,W,H);c.font="11px Consolas,monospace";c.textBaseline="middle";return [c,W];};
+  const L=52,R=44,XT=[0.25,0.5,0.75,1,1.5,2,2.5,3,4,5],NX=XT.length;
+  // x축 = 만기 눈금 등간격(눈금 사이는 선형). 짧은 만기가 몰리지 않게
+  const idx=t=>t<=XT[0]?(t-XT[0])/0.25:t>=XT[NX-1]?NX-1+(t-XT[NX-1]):(j=>j+(t-XT[j])/(XT[j+1]-XT[j]))(XT.findIndex((v,j)=>t>=v&&t<=XT[j+1])),
+    xOf=W=>t=>L+(idx(t)+0.6)/(NX-1+1.2)*(W-L-R);
+  // ---- 위: 커브
+  {const H=300,Tp=10,B=24,[c,W]=setup($("#rtCvA"),H),X=xOf(W);
+    const ys=[...D.cur,...D.kc,...D.pc].map(p=>p[1]);if(!ys.length){c.fillStyle=mu;c.fillText("데이터가 없습니다",20,30);}else{
+    let lo=Math.min(...ys),hi=Math.max(...ys);const pad=(hi-lo)*0.08||0.05;lo-=pad;hi+=pad;
+    const stp=rtNice(hi-lo,[0.05,0.1,0.2,0.25,0.5,1]),b0=Math.floor(lo/stp)*stp,t0=Math.ceil(hi/stp)*stp,Y=v=>Tp+(t0-v)/((t0-b0)||1)*(H-Tp-B);
+    for(let v=b0;v<=t0+1e-9;v+=stp){c.strokeStyle=gr;c.lineWidth=1;c.beginPath();c.moveTo(L,Y(v));c.lineTo(W-R,Y(v));c.stroke();c.fillStyle=ax;c.textAlign="right";c.fillText(v.toFixed(2),L-6,Y(v));}
+    c.textAlign="center";for(const t of XT){c.strokeStyle=gr;c.globalAlpha=.5;c.beginPath();c.moveTo(X(t),Tp);c.lineTo(X(t),H-B);c.stroke();c.globalAlpha=1;c.fillStyle=ax;c.fillText(tenorLabel(t),X(t),H-B+13);}
+    D.rows.forEach((r,k)=>{if(r.y1==null||r.y0==null)return;const h=k===rtCvHov,x1=X(r.t),x0=X(r.t-0.5);
+      c.fillStyle=cR;c.globalAlpha=h?.3:rtCvHov<0?.1:.05;c.beginPath();c.moveTo(x0,Y(r.y0));c.lineTo(x1,Y(r.y1));c.lineTo(x1,Y(r.y0));c.closePath();c.fill();c.globalAlpha=1;
+      c.strokeStyle=mu;c.lineWidth=1;c.setLineDash([2,3]);c.beginPath();c.moveTo(x0,Y(r.y0));c.lineTo(x1,Y(r.y0));c.stroke();c.setLineDash([]);
+      c.strokeStyle=cR;c.lineWidth=h?5:3;c.globalAlpha=rtCvHov<0||h?1:.45;c.beginPath();c.moveTo(x1,Y(r.y1));c.lineTo(x1,Y(r.y0));c.stroke();c.globalAlpha=1;});
+    const line=(pts,col,w,dash,dot)=>{if(!pts.length)return;c.strokeStyle=col;c.lineWidth=w;c.setLineDash(dash||[]);c.beginPath();pts.forEach(([t,v],k)=>k?c.lineTo(X(t),Y(v)):c.moveTo(X(t),Y(v)));c.stroke();c.setLineDash([]);
+      if(dot){c.fillStyle=col;for(const [t,v] of pts){c.beginPath();c.arc(X(t),Y(v),dot,0,7);c.fill();}}};
+    line(D.kc,mu,1.2,null,2);line(D.pc,cS,1.3,[5,4]);line(D.cur,cS,2,null,3);}}
+  // ---- 아래: 테너별 롤마진 막대 + 평균 ±1σ
+  {const H=300,Tp=10,B=100,rmM=D.md==="rm",[c,W]=setup($("#rtCvB"),H),X=xOf(W),u=(W-L-R)/(NX+0.2);
+    const vs=[0];for(const r of D.rows)for(const o of [r.c,r.k])if(o){if(o.cur!=null)vs.push(o.cur);if(o.m!=null&&o.s!=null)vs.push(o.m+o.s,o.m-o.s);}
+    let lo=Math.min(...vs),hi=Math.max(...vs);const pad=(hi-lo)*0.06||(hd?0.05:1);hi+=pad;if(lo<0)lo-=pad;
+    const stp=rtNice(hi-lo,hd?[0.05,0.1,0.2,0.25,0.5,1]:[1,2,5,10,20,25,50,100]),b0=Math.floor(lo/stp)*stp,t0=Math.ceil(hi/stp)*stp,Y=v=>Tp+(t0-v)/((t0-b0)||1)*(H-Tp-B);
+    for(let v=b0;v<=t0+1e-9;v+=stp){c.strokeStyle=gr;c.lineWidth=1;c.beginPath();c.moveTo(L,Y(v));c.lineTo(W-R,Y(v));c.stroke();c.fillStyle=ax;c.textAlign="right";c.fillText(hd?v.toFixed(2):String(+v.toFixed(1)),L-6,Y(v));}
+    c.strokeStyle=fg;c.globalAlpha=.6;c.beginPath();c.moveTo(L,Y(0));c.lineTo(W-R,Y(0));c.stroke();c.globalAlpha=1;
+    const two=D.rows.some(r=>r.k),tw=Math.min(u*0.62,two?44:30),bw=two?tw/2:tw;
+    D.rows.forEach((r,k)=>{const h=k===rtCvHov,x=X(r.t);
+      if(h){c.fillStyle=fg;c.globalAlpha=.06;c.fillRect(x-tw/2-6,Tp,tw+12,H-Tp-B);c.globalAlpha=1;}
+      [[r.c,cR,two?x-bw/2:x],[r.k,mu,x+bw/2]].forEach(([o,col,cx])=>{if(!o)return;
+        if(hd&&col===cR&&o.cur!=null&&r.y1!=null){const cy=r.y1*0.5;c.globalAlpha=.9;
+          c.fillStyle=cC;c.fillRect(cx-bw/2+1,Math.min(Y(0),Y(cy)),bw-2,Math.abs(Y(cy)-Y(0)));
+          c.fillStyle=cR;c.fillRect(cx-bw/2+1,Math.min(Y(cy),Y(o.cur)),bw-2,Math.max(1,Math.abs(Y(o.cur)-Y(cy))));c.globalAlpha=1;}
+        else if(o.cur!=null){c.fillStyle=col;c.globalAlpha=rmM?(col===mu?.25:.3):col===mu?.55:.9;c.fillRect(cx-bw/2+1,Math.min(Y(0),Y(o.cur)),bw-2,Math.abs(Y(o.cur)-Y(0)));
+          // 롤마진 보기: 옅은 막대(롤마진) 안에 진한 막대(롤 효과)
+          const e=rmM?(col===cR?r.ef:r.kef):null;if(e!=null){c.globalAlpha=col===mu?.65:.95;c.fillRect(cx-bw/2+1,Math.min(Y(0),Y(e)),bw-2,Math.max(1,Math.abs(Y(e)-Y(0))));}
+          c.globalAlpha=1;}
+        if(o.m!=null&&o.s!=null){c.strokeStyle=fg;c.lineWidth=1.3;c.beginPath();c.moveTo(cx,Y(o.m-o.s));c.lineTo(cx,Y(o.m+o.s));
+          c.moveTo(cx-4,Y(o.m-o.s));c.lineTo(cx+4,Y(o.m-o.s));c.moveTo(cx-4,Y(o.m+o.s));c.lineTo(cx+4,Y(o.m+o.s));c.stroke();
+          c.fillStyle=css("--panel")||"#fff";c.beginPath();c.arc(cx,Y(o.m),3.2,0,7);c.fill();c.stroke();}});
+      // 축 아래: 테너 / 롤마진 bp / 롤 효과 bp / 캐리 % / 6M 합계 %
+      const f=(v,n)=>v==null?"-":v.toFixed(n);c.textAlign="center";c.fillStyle=ax;c.fillText(rtLab(r.t),x,H-B+12);
+      c.fillStyle=cR;c.globalAlpha=.75;c.font="13px Consolas,monospace";c.fillText(f(r.rm,1),x,H-B+30);c.globalAlpha=1;c.font="bold 13px Consolas,monospace";c.fillText(f(r.ef,1),x,H-B+47);
+      c.fillStyle=cC;c.font="12px Consolas,monospace";c.fillText(f(r.cy,3),x,H-B+64);c.fillStyle=fg;c.font="bold 12px Consolas,monospace";c.fillText(f(r.tot,3),x,H-B+82);c.font="11px Consolas,monospace";});
+    c.textAlign="right";[["롤마진",30,cR,.75],["롤효과",47,cR,1],["캐리%",64,cC,1],["합계%",82,fg,1]].forEach(([l,dy,col,a])=>{c.fillStyle=col;c.globalAlpha=a;c.fillText(l,L-4,H-B+dy);});c.globalAlpha=1;
+    c.strokeStyle=gr;c.beginPath();c.moveTo(L,H-B+21);c.lineTo(W-R,H-B+21);c.moveTo(L,H-B+73);c.lineTo(W-R,H-B+73);c.stroke();
+    // 캐리(%) 는 오른쪽 보조축에 선으로 (6M 보유수익 보기는 막대에 이미 포함)
+    if(!hd){const cs=D.rows.filter(r=>r.cy!=null);if(cs.length){let a=Math.min(...cs.map(r=>r.cy)),b=Math.max(...cs.map(r=>r.cy));const pd=(b-a)*0.15||0.05;a-=pd;b+=pd;
+      const s2=rtNice(b-a,[0.02,0.05,0.1,0.2,0.25,0.5]),a0=Math.floor(a/s2)*s2,b1=Math.ceil(b/s2)*s2,Y2=v=>Tp+(b1-v)/((b1-a0)||1)*(H-Tp-B);
+      c.textAlign="left";c.fillStyle=cC;for(let v=a0;v<=b1+1e-9;v+=s2)c.fillText(v.toFixed(2),W-R+5,Y2(v));
+      c.strokeStyle=cC;c.lineWidth=1.6;c.beginPath();cs.forEach((r,j)=>{const x=X(r.t),y=Y2(r.cy);j?c.lineTo(x,y):c.moveTo(x,y);});c.stroke();
+      c.fillStyle=cC;for(const r of cs){c.beginPath();c.arc(X(r.t),Y2(r.cy),3.5,0,7);c.fill();}}}}
+  // ---- 마우스: 가까운 테너 강조 + 툴팁
+  const tip=$("#rtCvTip"),box=$("#rtCvBox");
+  const mv=e=>{const cv=e.currentTarget,r=cv.getBoundingClientRect(),W=cv.clientWidth,mx=e.clientX-r.left,X=xOf(W);
+    let k=-1,best=(W-L-R)/(NX+0.2)*0.5;D.rows.forEach((o,j)=>{const d=Math.abs(X(o.t)-mx);if(d<best){best=d;k=j;}});
+    if(k!==rtCvHov){rtCvHov=k;rtCvDraw();}
+    if(k<0){tip.style.display="none";return;}const o=D.rows[k],dn=D.md==="hold"?3:1,un=D.md==="hold"?"%":"bp",f=(x,n=1)=>x==null?"-":x.toFixed(n),z=s=>s&&s.cur!=null&&s.s?(s.cur-s.m)/s.s:null;
+    // 6M 보유 (커브 불변): 캐리 = y(T)×0.5, 롤 효과 = D × 롤마진
+    const ok=o.y1!=null&&o.y0!=null,Dd=ok?(o.t-0.5)/(1+o.y0/100):null,rmv=ok?(o.y1-o.y0)*100:null,ef=ok?Dd*rmv:null,cy=o.y1==null?null:o.y1*0.5;
+    tip.innerHTML=`<b>${rdShort(D.g)} ${rtLab(o.t)}</b> · ${DATES[D.bi]}<br>y(${tenorLabel(o.t)}) ${f(o.y1,3)}% → y(${tenorLabel(o.t-0.5)}) ${f(o.y0,3)}%`
+      +`<br>롤마진 ${f(rmv)}bp × 남은 듀레이션 ${f(Dd,2)} = 롤 효과 <b>${f(ef)}bp</b>`
+      +`<br>6M 보유수익 ≈ 캐리 ${f(cy,3)}% + 롤 효과 ${f(ok?ef/100:null,3)}% = <b>${ok?(cy+ef/100).toFixed(3):"-"}%</b> <span class="hint">(연 ${ok?((cy+ef/100)*2).toFixed(2):"-"}%)</span>`
+      +`<br><span style="color:${cR}">■</span> ${D.ml} ${D.stl} 평균 ${f(o.c&&o.c.m,dn)}${un} (σ ${f(o.c&&o.c.s,dn)}) · z ${z(o.c)==null?"-":(z(o.c)>0?"+":"")+z(o.c).toFixed(2)}`
+      +(o.k?`<br><span style="color:${mu}">■</span> 국고 ${D.ml} ${f(o.k.cur,dn)}${un} · 평균 ${f(o.k.m,dn)} (σ ${f(o.k.s,dn)})`:"");
+    tip.style.display="block";const br=box.getBoundingClientRect();let tx=e.clientX-br.left+14;if(tx+tip.offsetWidth>box.clientWidth)tx=e.clientX-br.left-tip.offsetWidth-14;
+    tip.style.left=tx+"px";tip.style.top=(e.clientY-br.top+16)+"px";};
+  const lv=()=>{tip.style.display="none";if(rtCvHov>=0){rtCvHov=-1;rtCvDraw();}};
+  for(const cv of [$("#rtCvA"),$("#rtCvB")]){cv.onmousemove=mv;cv.onmouseleave=lv;}
+}
 function drawRollTbl(){
   if(!$("#rtDate").value)$("#rtDate").value=DATES[RD_LAST];
   $("#rtSt").value=rt.st;$("#rtExA").value=rt.exA;$("#rtExB").value=rt.exB;$("#rtExOn").checked=rt.exOn;
-  drawRtA();drawRtB();
+  drawRtA();drawRtB();drawRtCv();
 }
 // 셀 클릭 → 계산기(BEP 6개월)로
-$("#rtTblA").onclick=e=>{const c=e.target.closest("td[data-g]");if(!c)return;
-  rd.group=RD_GROUPS.includes(c.dataset.g)?c.dataset.g:rd.group;rd.T=+c.dataset.t;rd.today=true;rd.bpN=6;rdSave();
-  rdSub="calc";store.set("rdSub",rdSub);renders.roll();setTimeout(()=>$("#bpOut").scrollIntoView({behavior:"smooth",block:"center"}),50);};
+$("#rtTblA").onclick=e=>{const lc=e.target.closest("[data-cv]");if(lc){rt.cv=lc.dataset.cv;rtSave();drawRtA();drawRtCv();
+    setTimeout(()=>$("#rtCvBox").scrollIntoView({behavior:"smooth",block:"nearest"}),50);return;}
+  const c=e.target.closest("td[data-g]");if(!c)return;
+  // 칸 클릭 → 커브 그림 섹터, 6M 보유수익 분해(그 테너), 일별 추이를 함께 맞춤
+  const g=c.dataset.g,t=+c.dataset.t;rt.cv=g;rt.ts={g,t};rt.v2=String(t);rtSave();drawRtA();drawRtB();drawRtCv();};
 let rdSub=store.get("rdSub","calc");
 $("#rdSub").onclick=e=>{const b=e.target.closest("button");if(!b)return;rdSub=b.dataset.v;store.set("rdSub",rdSub);renders.roll();};
 renders.roll=()=>{
