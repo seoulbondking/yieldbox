@@ -1947,7 +1947,7 @@ function drawRtCv(){
       :md==="rm"?`<span><i style="background:${cR};opacity:.35;height:10px;width:10px"></i>${rdShort(g)} 롤마진</span><span><i style="background:${cR};height:10px;width:10px"></i>롤 효과 (= 롤마진 × 남은 듀레이션)</span>`
       :`<span><i style="background:${cR};height:10px;width:10px"></i>${rdShort(g)} ${ml}</span>`)
     +(rows.some(r=>r.k)?`<span><i style="background:${css("--muted")};height:10px;width:10px"></i>국고 ${ml}</span>`:"")
-    +(md==="hold"?"":`<span><i style="background:${cC}"></i>캐리 (%, 우축)</span>`)
+    +(md==="hold"?"":`<span><i style="background:${cC}"></i>캐리 (%, 우축)</span><span><i style="background:${PAL[3]}"></i>합계 = 6M 보유수익 (%, 우축)</span>`)
     +`<span><i style="background:none;border:2px solid ${css("--fg")};width:6px;height:6px;border-radius:50%"></i>${stl} 평균 ±1σ${md==="hold"?" (6M 보유수익)":""}</span><span class="hint">${md==="hold"?"%, 6개월 기간 수익 · 막대 = 캐리 + 롤 효과":"bp"}</span>`;
   rtCvDraw();
 }
@@ -1996,15 +1996,17 @@ function rtCvDraw(){
       // 축 아래: 테너 / 롤마진 bp / 롤 효과 bp / 캐리 % / 6M 합계 %
       const f=(v,n)=>v==null?"-":v.toFixed(n);c.textAlign="center";c.fillStyle=ax;c.fillText(rtLab(r.t),x,H-B+12);
       c.fillStyle=cR;c.globalAlpha=.75;c.font="13px Consolas,monospace";c.fillText(f(r.rm,1),x,H-B+30);c.globalAlpha=1;c.font="bold 13px Consolas,monospace";c.fillText(f(r.ef,1),x,H-B+47);
-      c.fillStyle=cC;c.font="12px Consolas,monospace";c.fillText(f(r.cy,3),x,H-B+64);c.fillStyle=fg;c.font="bold 12px Consolas,monospace";c.fillText(f(r.tot,3),x,H-B+82);c.font="11px Consolas,monospace";});
-    c.textAlign="right";[["롤마진",30,cR,.75],["롤효과",47,cR,1],["캐리%",64,cC,1],["합계%",82,fg,1]].forEach(([l,dy,col,a])=>{c.fillStyle=col;c.globalAlpha=a;c.fillText(l,L-4,H-B+dy);});c.globalAlpha=1;
+      c.fillStyle=cC;c.font="12px Consolas,monospace";c.fillText(f(r.cy,3),x,H-B+64);c.fillStyle=PAL[3];c.font="bold 12px Consolas,monospace";c.fillText(f(r.tot,3),x,H-B+82);c.font="11px Consolas,monospace";});
+    c.textAlign="right";[["롤마진",30,cR,.75],["롤효과",47,cR,1],["캐리%",64,cC,1],["합계%",82,PAL[3],1]].forEach(([l,dy,col,a])=>{c.fillStyle=col;c.globalAlpha=a;c.fillText(l,L-4,H-B+dy);});c.globalAlpha=1;
     c.strokeStyle=gr;c.beginPath();c.moveTo(L,H-B+21);c.lineTo(W-R,H-B+21);c.moveTo(L,H-B+73);c.lineTo(W-R,H-B+73);c.stroke();
-    // 캐리(%) 는 오른쪽 보조축에 선으로 (6M 보유수익 보기는 막대에 이미 포함)
-    if(!hd){const cs=D.rows.filter(r=>r.cy!=null);if(cs.length){let a=Math.min(...cs.map(r=>r.cy)),b=Math.max(...cs.map(r=>r.cy));const pd=(b-a)*0.15||0.05;a-=pd;b+=pd;
+    // 캐리·합계(%) 는 오른쪽 보조축에 선으로 (6M 보유수익 보기는 막대에 이미 포함)
+    if(!hd){const cs=D.rows.filter(r=>r.cy!=null),ts=D.rows.filter(r=>r.tot!=null),vv=[...cs.map(r=>r.cy),...ts.map(r=>r.tot)];if(cs.length){let a=Math.min(...vv),b=Math.max(...vv);const pd=(b-a)*0.15||0.05;a-=pd;b+=pd;
       const s2=rtNice(b-a,[0.02,0.05,0.1,0.2,0.25,0.5]),a0=Math.floor(a/s2)*s2,b1=Math.ceil(b/s2)*s2,Y2=v=>Tp+(b1-v)/((b1-a0)||1)*(H-Tp-B);
       c.textAlign="left";c.fillStyle=cC;for(let v=a0;v<=b1+1e-9;v+=s2)c.fillText(v.toFixed(2),W-R+5,Y2(v));
       c.strokeStyle=cC;c.lineWidth=1.6;c.beginPath();cs.forEach((r,j)=>{const x=X(r.t),y=Y2(r.cy);j?c.lineTo(x,y):c.moveTo(x,y);});c.stroke();
-      c.fillStyle=cC;for(const r of cs){c.beginPath();c.arc(X(r.t),Y2(r.cy),3.5,0,7);c.fill();}}}}
+      c.fillStyle=cC;for(const r of cs){c.beginPath();c.arc(X(r.t),Y2(r.cy),3.5,0,7);c.fill();}
+      c.strokeStyle=PAL[3];c.lineWidth=2.4;c.beginPath();ts.forEach((r,j)=>{const x=X(r.t),y=Y2(r.tot);j?c.lineTo(x,y):c.moveTo(x,y);});c.stroke();
+      c.fillStyle=PAL[3];for(const r of ts){c.beginPath();c.arc(X(r.t),Y2(r.tot),4,0,7);c.fill();}}}}
   // ---- 마우스: 가까운 테너 강조 + 툴팁
   const tip=$("#rtCvTip"),box=$("#rtCvBox");
   const mv=e=>{const cv=e.currentTarget,r=cv.getBoundingClientRect(),W=cv.clientWidth,mx=e.clientX-r.left,X=xOf(W);
