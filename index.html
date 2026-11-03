@@ -178,6 +178,7 @@ tr:hover td{background:var(--hover)}
 .rtt td,.rtt th{text-align:right;white-space:nowrap}
 .rtt td:first-child,.rtt th:first-child{text-align:left}
 .rtt tr.gsep td{border-top:2px solid var(--line)}
+#mxTbl tr.fsep td{border-top:2px solid var(--fg)}
 .rtt td.ck{cursor:pointer}
 .rtt td.ck:hover{outline:1px solid var(--amber);outline-offset:-1px}
 #err{display:none;padding:40px;text-align:center}
@@ -657,7 +658,7 @@ tr:hover td{background:var(--hover)}
         <span><label class="lbl">기준일</label><input type="date" id="mxDate"></span>
         <span id="mxPeriodWrap"><label class="lbl">비교기간</label><select id="mxPeriod"></select></span>
       </div>
-      <div class="tblwrap" style="margin-top:12px;max-height:none"><table id="mxTbl"></table></div>
+      <div class="tblwrap" style="margin-top:12px;max-height:none"><table id="mxTbl" style="table-layout:fixed;min-width:1100px"></table></div>
     </div>
   </section>
 
@@ -1360,8 +1361,9 @@ function drawMatrix(){
   const bi=idxOnOrBefore($("#mxDate").value||DATES[LAST]);const pj=shiftIdx(bi,$("#mxPeriod").value);
   $("#mxPeriodWrap").style.display=mxMode==="chg"||mxMode==="sprchg"?"":"none";
   const KTB=BYGROUP["국고채권"]||[];const ktb=(y,i)=>{const s=KTB.find(s=>s.years===y);return s?valAt(s,i):null;};
-  const groups=CURVE_GROUPS.filter(g=>!/ACM|^미국채/.test(g)&&!(mxMode.startsWith("spr")&&["국고채권","통안증권","CD","A1 CP"].includes(g)));
-  const ys=[...new Set(groups.flatMap(g=>TENORED(g).map(s=>s.years)))].sort((a,b)=>a-b);
+  const groups=CURVE_GROUPS.filter(g=>!/ACM|^미국채|^KW /.test(g)&&!(mxMode.startsWith("spr")&&["국고채권","통안증권","CD","A1 CP"].includes(g)));
+  // 열(만기)은 네 보기 모두 같은 목록을 써서 표 모양을 고정
+  const ys=[...new Set(CURVE_GROUPS.filter(g=>!/ACM|^미국채|^KW /.test(g)).flatMap(g=>TENORED(g).map(s=>s.years)))].sort((a,b)=>a-b);
   const cell=(s,i)=>{const v=valAt(s,i);if(v==null)return null;
     if(mxMode==="lvl")return v;
     if(mxMode==="spr"){const k=ktb(s.years,i);return k==null?null:(v-k)*100;}
@@ -1373,8 +1375,10 @@ function drawMatrix(){
   const div=mxMode==="chg"||mxMode==="sprchg";
   const mx=div?Math.max(...all.map(Math.abs)):Math.max(...all),mn=div?0:Math.min(...all);
   const fmt=v=>v==null?"":mxMode==="lvl"?v.toFixed(3):div?fbp(v):v.toFixed(1);
-  let h=`<thead><tr><th>${DATES[bi]}${div?" vs "+DATES[pj]:""}</th>${ys.map(y=>`<th>${tenorLabel(y)}</th>`).join("")}</tr></thead><tbody>`;
-  for(const [g,vs] of rows)h+=`<tr><td>${g}</td>${vs.map(v=>`<td class="heat" style="${div?heat(v,mx,true):heat(v==null?null:v-mn,mx-mn,false)}">${fmt(v)}</td>`).join("")}</tr>`;
+  let h=`<colgroup><col style="width:190px">${ys.map(()=>"<col>").join("")}</colgroup><thead><tr><th>${DATES[bi]}${div?" vs "+DATES[pj]:""}</th>${ys.map(y=>`<th>${tenorLabel(y)}</th>`).join("")}</tr></thead><tbody>`;
+  // 큰 구분(국고·통안 / 공사·공단 / 산금·중금 / 은행 / 카드 / 기타금융 / 회사채 / 단기 / IRS)이 바뀌는 행 위에 굵은 선
+  const fam=g=>/국고|통안/.test(g)?0:/공사|공단/.test(g)?1:/산금|중금/.test(g)?2:/은행/.test(g)?3:/카드/.test(g)?4:/기타금융/.test(g)?5:/회사채/.test(g)?6:/CD|CP|콜/.test(g)?7:/IRS/.test(g)?8:9;
+  rows.forEach(([g,vs],r)=>h+=`<tr${r&&fam(g)!==fam(rows[r-1][0])?' class="fsep"':""}><td>${g}</td>${vs.map(v=>`<td class="heat" style="${div?heat(v,mx,true):heat(v==null?null:v-mn,mx-mn,false)}">${fmt(v)}</td>`).join("")}</tr>`);
   $("#mxTbl").innerHTML=h+"</tbody>";
 }
 renders.matrix=drawMatrix;
