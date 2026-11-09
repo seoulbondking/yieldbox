@@ -163,7 +163,16 @@ tr:hover td{background:var(--hover)}
 :root[data-theme="light"] header .btn{border-color:var(--line);color:var(--fg)}
 :root[data-theme="light"] .card .v{color:#111}
 .usgrid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:10px;align-items:start}
-@media (max-width:1100px){.usgrid{grid-template-columns:1fr}}
+.usgrid.flgrid{grid-template-columns:minmax(0,1.6fr) minmax(0,1fr)}
+/* 섹터 × 만기 줄: 오른쪽 차트 패널과 높이를 맞추고 남는 높이는 표 행이 나눠 가짐 */
+.usgrid.flstretch{align-items:stretch}
+.flposgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px}
+.flposgrid h3{margin:0 0 2px;font-size:13px;font-weight:600}
+.flposgrid .chart{min-height:0}
+.usgrid.flstretch>.panel:first-child{display:flex;flex-direction:column}
+.usgrid.flstretch>.panel:first-child>.tblwrap{flex:1}
+.usgrid.flstretch>.panel:first-child table{height:100%}
+@media (max-width:1100px){.usgrid,.usgrid.flgrid{grid-template-columns:1fr}}
 .cvpick{display:grid;grid-template-columns:76px 1fr;gap:6px 12px;align-items:center;margin:8px 0 4px;padding:8px 10px;background:var(--bg);border:1px solid var(--line);border-radius:2px}
 .cvpick .cl{font-size:11px;font-weight:700;color:var(--amber);letter-spacing:.3px;text-align:right}
 .cvpick .chips{margin:0;gap:5px}
@@ -196,6 +205,7 @@ tr:hover td{background:var(--hover)}
     <button data-tab="ust">기간프리미엄</button>
     <button data-tab="fwd">선도금리</button>
     <button data-tab="kfut">국채선물</button>
+    <button data-tab="flow">수급</button>
     <button data-tab="roll">롤다운</button>
     <button data-tab="table">데이터</button>
   </nav>
@@ -459,6 +469,46 @@ tr:hover td{background:var(--hover)}
       <p class="hint" style="margin:6px 0 0">'미국 동일조건'은 연준 무이표 금리로 국고와 똑같은 설정(팩터 3개, 2001년~ 월말)으로 추정한 값입니다. 뉴욕연준 공식값(1961년~, 팩터 5개)과 수준을 직접 비교하면 결론이 뒤집힐 수 있어, 국가 비교는 동일조건 값으로 보세요.</p>
     </div>
     </div>
+  </section>
+
+  <!-- 수급: 투자자별 장외 채권 잔고·순매수 (주간) -->
+  <section class="tab" id="tab-flow">
+    <div class="row" style="margin-bottom:10px">
+      <span><label class="lbl">순매수 기간</label><span class="seg" id="flPer"></span></span>
+      <span id="flCustom"><input type="date" id="flA"> ~ <input type="date" id="flB"></span>
+      <span class="hint" id="flAsOf"></span>
+    </div>
+    <div class="usgrid flgrid">
+      <div class="panel" id="flWhoPanel">
+        <div class="row" style="justify-content:space-between"><h2 id="flWhoTitle">섹터별 순매수 · 전 만기</h2><span class="hint" id="flWhoNote"></span></div>
+        <div class="tblwrap" style="max-height:none"><table id="flWho"></table></div>
+        <p class="hint" style="margin:6px 0 0">단위: 조원. 칸이나 오른쪽 막대를 누르면 아래 섹터 × 만기 표와 순매수 차트가 그 투자자·섹터로 바뀝니다. 순매수는 만기상환을 빼지 않아 단기물을 많이 굴리는 은행·운용은 잔고 변화보다 크게 나옵니다.</p>
+      </div>
+      <div class="panel" id="flStkPanel" style="position:relative">
+        <div class="row" style="justify-content:space-between"><h2>투자자별 섹터 순매수 (누적)</h2></div>
+        <canvas id="flStk" style="width:100%;height:300px;display:block;cursor:pointer"></canvas>
+        <div id="flStkLeg" class="hint" style="display:flex;flex-wrap:wrap;gap:4px 12px;justify-content:center;margin-top:4px"></div>
+        <div id="flStkTip" style="position:absolute;display:none;pointer-events:none;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 9px;font-size:12px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.25)"></div>
+      </div>
+    </div>
+    <div class="usgrid flgrid flstretch">
+      <div class="panel">
+        <div class="row" style="justify-content:space-between"><h2 id="flMxTitle">섹터 × 만기</h2><div class="row" style="gap:8px"><div class="seg" id="flInv"></div><div class="seg" id="flTm"><button data-m="net">순매수</button><button data-m="chg">잔고 변화</button><button data-m="bal">잔고</button><button data-m="share">비중</button></div></div></div>
+        <div class="tblwrap" style="max-height:none"><table id="flMx" style="table-layout:fixed;min-width:820px"></table></div>
+        <p class="hint" style="margin:6px 0 0">칸을 누르면 오른쪽 순매수 차트가 그 섹터·만기로 바뀝니다. 통안증권은 3년 이하 구간만 있습니다.</p>
+      </div>
+      <div class="panel">
+        <div class="row" style="justify-content:space-between"><h2 id="flNetTitle">주간 순매수</h2><div id="flRange"></div></div>
+        <div class="chart" id="flNet" style="min-height:0"></div>
+      </div>
+    </div>
+    <div class="cards" id="flCards"></div>
+    <div class="panel">
+      <div class="row" style="justify-content:space-between"><h2>투자자별 포지션 추이 (채권 전체)</h2><div class="seg" id="flMet"><button data-m="bal">잔고</button><button data-m="dur">듀레이션</button><button data-m="delta">델타</button></div></div>
+      <div class="flposgrid" id="flPosGrid"></div>
+      <p class="hint" style="margin:6px 0 0">기관마다 세로축이 따로입니다. 다섯 차트는 함께 확대·축소되고, 더블클릭하면 전체 기간으로 돌아갑니다.</p>
+    </div>
+    <p class="hint">출처: 인포맥스 채권(장외) 투자주체별 잔고/거래, 주간(주말 기준일). WTD = 최근 1주, MTD·QTD·YTD = 그 달·분기·연도에 속한 주 합계. 잔고는 순매도종목 제외 잔고. 운용 = 투신 + 사모펀드 (듀레이션·델타는 투신 기준). 델타 = 금리 1bp 변화당 평가손익(억원).</p>
   </section>
 
   <!-- 국채선물 -->
@@ -766,12 +816,12 @@ function rangeBar(el,key,def,onChange){
 /* ---------- 차트 ---------- */
 const plots={};
 function axis(extra){const g=css("--grid"),m=css("--axis");return Object.assign({stroke:m,grid:{stroke:g,width:1},ticks:{stroke:g,width:1}},extra||{});}
-function tsChart(id,lines,{unit="%",height=380,zero=false,init=null,sync=null,shade=null,bands=null,onCursor=null,y2unit="bp",regions=null,ysize=null,padR=null,y2size=null}={}){
+function tsChart(id,lines,{unit="%",height=380,zero=false,init=null,sync=null,shade=null,bands=null,onCursor=null,y2unit="bp",regions=null,ysize=null,padR=null,y2size=null,dec:decOpt=null,adec=null,cursorSync=true}={}){
   const el=document.getElementById(id);
   if(plots[id]){plots[id].destroy();delete plots[id];}
   el.innerHTML="";
   if(!window.uPlot||!lines.length||!lines[0].x.length){el.innerHTML='<p class="hint" style="padding:40px;text-align:center">표시할 데이터가 없습니다.</p>';return;}
-  const dec=unit==="bp"?1:unit==="회"?2:unit==="계약"?0:3,suf=unit==="%"?"":unit;
+  const dec=decOpt??(unit==="bp"?1:unit==="회"?2:unit==="계약"?0:3),suf=unit==="%"?"":unit;
   const fmtU=(v,u,d)=>u==="계약"?Math.round(v).toLocaleString()+"계약":u==="bp"?v.toFixed(1)+"bp":v.toFixed(d);
   const opts={width:el.clientWidth||800,height,
     scales:{x:{time:true}},
@@ -780,17 +830,18 @@ function tsChart(id,lines,{unit="%",height=380,zero=false,init=null,sync=null,sh
         // y2: 오른쪽 보조축(bp). fill 은 0 기준 반투명 면
         scale:l.y2?"y2":"y",fill:l.fill,fillTo:l.fill?(()=>0):undefined,
         // bars: 막대 (외국인 순매수 등)
-        paths:l.bars?uPlot.paths.bars({size:[0.75,12]}):l.step&&uPlot.paths.stepped?uPlot.paths.stepped({align:1}):undefined,
+        paths:l.bars?uPlot.paths.bars({size:l.barSize||[0.75,12]}):l.step&&uPlot.paths.stepped?uPlot.paths.stepped({align:1}):undefined,
         ...(l.bars?{fill:l.color,width:0,points:{show:false}}:{}),
         value:(u,v)=>v==null?"-":l.y2?fmtU(v,y2unit,3):unit==="계약"?fmtU(v,unit):v.toFixed(dec)+suf}))],
-    axes:[axis(),axis({size:ysize||(unit==="계약"?70:58),values:(u,vs)=>vs.map(v=>unit==="bp"?v.toFixed(0):unit==="회"?v.toFixed(1)+"회":unit==="계약"?Math.round(v).toLocaleString():v.toFixed(2))})],
-    cursor:{drag:{x:true,y:false,setScale:false},sync:sync?{key:sync}:undefined,
+    axes:[axis(),axis({size:ysize||(unit==="계약"?70:58),values:(u,vs)=>vs.map(v=>unit==="bp"?v.toFixed(0):unit==="회"?v.toFixed(1)+"회":unit==="계약"?Math.round(v).toLocaleString():adec!=null?v.toLocaleString(undefined,{minimumFractionDigits:adec,maximumFractionDigits:adec}):v.toFixed(2))})],
+    // cursorSync:false 면 커서·드래그 선택은 차트마다 따로 (확대·축소 범위는 아래 setScale 훅으로 계속 맞춤)
+    cursor:{drag:{x:true,y:false,setScale:false},sync:sync&&cursorSync?{key:sync}:undefined,
       // 더블클릭: 기간 선택 바에서 고른 구간으로 복귀
       bind:{dblclick:u=>()=>{if(init)u.setScale("x",{min:init[0],max:init[1]});else u.setScale("x",{min:u.data[0][0],max:u.data[0][u.data[0].length-1]});return null;}}},
   };
   if(lines.some(l=>l.y2)){opts.scales.y2={auto:true};
     opts.axes.push(axis({scale:"y2",side:1,size:y2size||(y2unit==="계약"?74:54),grid:{show:false},values:(u,vs)=>vs.map(v=>y2unit==="bp"?v.toFixed(0)+"bp":y2unit==="계약"?Math.round(v).toLocaleString():v.toFixed(2))}));}
-  opts.hooks={setSelect:[dragZoom],ready:[u=>u.over.addEventListener("mousedown",e=>{u._downX=e.clientX-u.over.getBoundingClientRect().left;})],
+  opts.hooks={setSelect:[dragZoom],ready:[u=>u.over.addEventListener("mousedown",e=>{if(e.button)return;u._downX=e.clientX-u.over.getBoundingClientRect().left;DRAG_PLOT=u;})],
     // 같은 sync 그룹 차트끼리 X축 확대/축소를 맞춤
     setScale:[(u,k)=>{if(k!=="x"||!u._sync||u._syncing)return;for(const p of Object.values(plots))if(p!==u&&p._sync===u._sync&&(p.scales.x.min!==u.scales.x.min||p.scales.x.max!==u.scales.x.max)){p._syncing=true;p.setScale("x",{min:u.scales.x.min,max:u.scales.x.max});p._syncing=false;}}]};
   // 평균 ±1σ·±2σ 배경 띠 (bands={mean,sd,rgb})
@@ -834,9 +885,18 @@ function tsChart(id,lines,{unit="%",height=380,zero=false,init=null,sync=null,sh
   plots[id]=new uPlot(opts,[lines[0].x,...lines.map(l=>l.y)],el);plots[id]._sync=sync;
   if(init)plots[id].setScale("x",{min:init[0],max:init[1]});
 }
+// 드래그하다 차트 밖(옆 차트 위 등)으로 나가도 선택을 차트 끝까지 이어가고, 밖에서 놓아도 확대되게
+let DRAG_PLOT=null;
+document.addEventListener("mousemove",e=>{const u=DRAG_PLOT;if(!u||!u.over.isConnected)return;
+  const r=u.over.getBoundingClientRect(),x=Math.max(0,Math.min(r.width,e.clientX-r.left)),a=u._downX;
+  if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)u.setSelect({left:Math.min(a,x),top:0,width:Math.abs(x-a),height:r.height},false);});
+document.addEventListener("mouseup",()=>{const u=DRAG_PLOT;DRAG_PLOT=null;if(!u)return;
+  // uPlot 이 이미 확대했으면(차트 안에서 놓은 경우) 건너뜀
+  setTimeout(()=>{if(u.over.isConnected&&performance.now()-(u._zt||0)>150&&u.select.width>=5){dragZoom(u);
+    setTimeout(()=>u.over.isConnected&&u.setSelect({left:0,top:0,width:0,height:0},false),60);}},0);});
 // 오른쪽으로 드래그 = 선택 구간 확대, 왼쪽으로 드래그 = 축소(현재 화면이 드래그한 폭으로 줄어드는 만큼)
 function dragZoom(u){
-  const sel=u.select;if(sel.width<5)return;
+  const sel=u.select;if(sel.width<5)return;u._zt=performance.now();
   // 방향은 선택 상자가 누른 지점의 어느 쪽으로 펼쳐졌는지로 판단 (차트 밖에서 놓으면 cursor.left 가 -10 이 되므로 사용 불가)
   const dx=u._downX??sel.left,toRight=Math.abs(sel.left-dx)<=Math.abs(sel.left+sel.width-dx);
   const xs=u.data[0],lo=xs[0],hi=xs[xs.length-1];
@@ -2525,6 +2585,175 @@ renders.kfut=()=>{
   $$("#kfProd button").forEach(b=>b.classList.toggle("on",b.dataset.p===kf.prod));$("#kfMa").value=kf.ma;
   const D=kfData();if(!D){$("#kfCards").innerHTML='<p class="hint">국채선물 데이터가 없습니다. INFO_DATA.xlsx 에 국채선물 시트를 넣고 업데이트.bat 을 실행하세요.</p>';return;}
   drawKfCards(D);drawKfCharts();
+};
+
+/* ---------- 수급: 투자자별 장외 채권 잔고·순매수 (주간, DB.flow 는 억원) ---------- */
+const FL=DB.flow||null;
+let fl=Object.assign({inv:"외국인",per:"WTD",met:"bal",tm:"net",sec:"전체",ten:"전체",a:null,b:null},store.get("fl",{}));
+const FL_INVS=["외국인","기금","보험","은행","운용"],FL_PARTS={운용:["투신","사모펀드"]},FL_POSN={운용:"투신"};
+const FL_PERS=["WTD","MTD","QTD","YTD","기간설정"];
+if(!FL_PERS.includes(fl.per))fl.per="WTD";
+const flSave=()=>store.set("fl",fl);
+const fJo=(v,d=1)=>v==null?"-":(v/1e4).toFixed(d);                      // 억원 -> 조원
+const fJs=(v,d=2)=>v==null?"-":(v>0?"+":"")+(v/1e4).toFixed(d);
+// 여러 배열 합 (모두 비면 null)
+const flAdd=arrs=>{arrs=arrs.filter(Boolean);if(!arrs.length)return null;const n=arrs[0].length,o=new Array(n).fill(null);
+  for(const a of arrs)for(let i=0;i<n;i++)if(a[i]!=null)o[i]=(o[i]||0)+a[i];return o;};
+// kind: bal|net, sec: 섹터 또는 "전체"(합), inv: 투자자 또는 "운용", ten: 만기 구간
+const FL_TEN_PARTS={"1Y이하":["0_6M","6M_1Y"]};   // 표에서 합쳐 보이는 만기 구간
+function flSer(kind,sec,inv,ten){
+  const secs=sec==="전체"?FL.secs:[sec],invs=FL_PARTS[inv]||[inv],tens=FL_TEN_PARTS[ten]||[ten];
+  return flAdd(secs.flatMap(s=>invs.flatMap(i=>tens.map(t=>FL[kind][s]&&FL[kind][s][i]&&FL[kind][s][i][t]))));
+}
+const flPos=(key,inv)=>FL.pos[key][FL_POSN[inv]||inv]||null;
+let FL_TS=null,FL_L=0;
+// 기간 순매수 합: 마지막 주부터 k주 (YTD 는 올해 첫 주부터)
+// 기간: WTD = 최근 1주, MTD·QTD·YTD = 최근 주와 같은 달·분기·연도에 속한 주들, 기간설정 = 두 날짜 사이 주들
+function flWin(){
+  const D=FL.dates,last=D[FL_L];
+  if(fl.per==="기간설정"){
+    const A=fl.a||D[Math.max(0,FL_L-12)],B=fl.b||last;let a=D.findIndex(d=>d>=A);if(a<0)a=FL_L;
+    let b=FL_L;while(b>0&&D[b]>B)b--;return a<=b?[a,b]:[b,a];}
+  if(fl.per==="WTD")return [FL_L,FL_L];
+  const key=d=>fl.per==="MTD"?d.slice(0,7):fl.per==="QTD"?d.slice(0,4)+"Q"+Math.ceil(+d.slice(5,7)/3):d.slice(0,4);
+  const k=key(last);let a=FL_L;while(a>0&&key(D[a-1])===k)a--;return [a,FL_L];}
+const flPerLabel=()=>{const w=flWin();return fl.per==="기간설정"?`${FL.dates[w[0]].slice(2)}~${FL.dates[w[1]].slice(2)}`:fl.per;};
+const flSum=(arr,[a,b])=>{if(!arr)return null;let s=0,c=0;for(let i=a;i<=b;i++)if(arr[i]!=null){s+=arr[i];c++;}return c?s:null;};
+const flLastOf=arr=>{if(!arr)return null;for(let i=FL_L;i>=0;i--)if(arr[i]!=null)return arr[i];return null;};
+
+function drawFlCards(){
+  const w=flWin();
+  $("#flCards").innerHTML=FL_INVS.map(inv=>{
+    const b=flLastOf(flPos("bal",inv)),d=flLastOf(flPos("dur",inv)),dl=flLastOf(flPos("delta",inv)),nt=flSum(flSer("net","전체",inv,"전체"),w);
+    return `<div class="card" data-inv="${inv}" style="cursor:pointer;${inv===fl.inv?"outline:2px solid var(--accent)":""}"><div class="k">${inv}${FL_POSN[inv]?" (포지션: 투신)":""}</div>`+
+      `<div class="v">${fJo(b)}<span style="font-size:13px;font-weight:400"> 조</span></div>`+
+      `<div class="c">듀레이션 ${d==null?"-":d.toFixed(2)} · 델타 ${dl==null?"-":Math.round(dl).toLocaleString()}억/bp</div>`+
+      `<div class="c ${cls(nt)}">${flPerLabel()} 순매수 ${fJs(nt)}조</div></div>`;}).join("");
+}
+// 기관별 작은 차트 5개: 축을 따로 써서 각자의 변화가 보이게 (x축은 함께 움직임)
+function drawFlPos(){
+  const unit=fl.met==="bal"?"조":fl.met==="dur"?"년":"억/bp",conv=v=>v==null?null:fl.met==="bal"?v/1e4:v;
+  const fmt=v=>v==null?"-":fl.met==="bal"?v.toFixed(1)+"조":fl.met==="dur"?v.toFixed(2)+"년":Math.round(v).toLocaleString()+"억/bp";
+  const fmtD=v=>v==null?"-":(v>0?"+":"")+(fl.met==="bal"?v.toFixed(1):fl.met==="dur"?v.toFixed(2):Math.round(v).toLocaleString());
+  const g=$("#flPosGrid");
+  g.innerHTML=FL_INVS.map((inv,k)=>`<div><h3 id="flPosH${k}"></h3><div class="chart" id="flPos${k}"></div></div>`).join("");
+  FL_INVS.forEach((inv,k)=>{const a=flPos(fl.met,inv);if(!a)return;const y=a.map(conv);
+    let L=y.length-1;while(L>0&&y[L]==null)L--;let P=L;while(P>0&&FL.dates[P]>((+FL.dates[L].slice(0,4)-1)+FL.dates[L].slice(4)))P--;
+    const d=y[L]!=null&&y[P]!=null?y[L]-y[P]:null;
+    $("#flPosH"+k).innerHTML=`<span style="color:${PAL[k]}">●</span> ${inv}${FL_POSN[inv]?" (투신)":""} <span style="font-weight:400">${fmt(y[L])}</span> <span class="${cls(d)}" style="font-weight:400">1Y ${fmtD(d)}</span>`;
+    tsChart("flPos"+k,[{label:inv,color:PAL[k],x:FL_TS,y,width:inv===fl.inv?2.4:1.8}],{unit,dec:fl.met==="dur"?2:fl.met==="bal"?1:0,adec:fl.met==="dur"?1:0,height:200,ysize:58,sync:"flpos",cursorSync:false});});
+}
+const flRangeGet=rangeBar($("#flRange"),"fl","3Y",()=>drawFlNet());
+function drawFlNet(){
+  const [i0,i1]=flRangeGet(),a=flSer("net",fl.sec,fl.inv,fl.ten);
+  $("#flNetTitle").textContent=`${fl.inv} 주간 순매수 · ${fl.sec==="전체"?"채권 전체":fl.sec} · ${fl.ten==="전체"?"전 만기":fl.ten.replace("_","~")}`;
+  if(!a){tsChart("flNet",[],{});return;}
+  const t0=TS[i0],t1=TS[i1];let acc=0;
+  // 연휴 주는 날짜가 하루·이틀 간격으로 붙어 있어(예: 12/30, 12/31) 막대 폭이 그 간격에 맞춰 가늘어짐
+  // -> 각 날짜를 그 주 금요일로 맞추고 같은 주는 합쳐서 매주 같은 간격으로 그림
+  const wk=new Map();FL_TS.forEach((t,k)=>{const w=new Date(t*1000).getDay(),f=t+(w===0?-2:5-w)*86400,p=wk.get(f),v=a[k];
+    wk.set(f,p==null?(v??null):v==null?p:p+v);});
+  const X=[...wk.keys()].sort((p,q)=>p-q),W=X.map(t=>wk.get(t));
+  const cum=W.map((v,k)=>X[k]<t0||X[k]>t1+7*86400?null:(acc+=(v||0))/1e4);
+  const ls=[{label:"순매수(+)",color:css("--up"),x:X,y:W.map(v=>v>0?v/1e4:null),bars:true,barSize:[0.8,60]},{label:"순매도(−)",color:css("--down"),x:X,y:W.map(v=>v<0?v/1e4:null),bars:true,barSize:[0.8,60]},
+    {label:"기간 누적 (우)",color:PAL[5],x:X,y:cum,width:2,y2:true}];
+  // 양 끝 막대가 반만 보이지 않게 앞뒤로 반 주씩 여유
+  tsChart("flNet",ls,{unit:"조",y2unit:"조",dec:2,zero:true,height:300,init:[t0-4*86400,t1+4*86400],ysize:64});
+}
+function drawFlMx(){
+  const w=flWin(),inv=fl.inv,tens=["1Y이하",...FL.tens.filter(t=>t!=="전체"&&!FL_TEN_PARTS["1Y이하"].includes(t))],cols=["전체",...tens];
+  const tot=flLastOf(flSer("bal","전체",inv,"전체"));
+  // 잔고 변화 = 기간 시작 직전 주 대비 (순매수와 달리 만기상환이 빠짐)
+  const val=(sec,ten)=>{if(fl.tm==="net")return flSum(flSer("net",sec,inv,ten),w);
+    if(fl.tm==="chg"){const a=flSer("bal",sec,inv,ten);const p=a&&a[Math.max(0,w[0]-1)],q=a&&a[w[1]];return p==null||q==null?null:q-p;}
+    const b=flLastOf(flSer("bal",sec,inv,ten));return fl.tm==="share"?(b==null||!tot?null:b/tot*100):b;};
+  const rows=[...FL.secs,"전체"].map(s=>[s,cols.map(t=>val(s,t))]);
+  const inner=rows.filter(r=>r[0]!=="전체").flatMap(r=>r[1].slice(1)).filter(v=>v!=null);
+  const mx=Math.max(1e-9,...inner.map(Math.abs)),div=fl.tm==="net"||fl.tm==="chg";
+  const fmt=v=>v==null?"":fl.tm==="share"?v.toFixed(1):div?fJs(v):fJo(v);
+  $("#flMxTitle").textContent=`${inv} · 섹터 × 만기 ${fl.tm==="bal"?"잔고(조)":fl.tm==="share"?"비중(% of 전체 잔고)":fl.tm==="net"?`${flPerLabel()} 순매수(조)`:`${flPerLabel()} 잔고 변화(조)`}`;
+  let h=`<colgroup><col style="width:96px">${cols.map(()=>"<col>").join("")}</colgroup><thead><tr><th>${FL.dates[FL_L]}</th>${cols.map(t=>`<th>${t==="전체"?"전체":t.replace("_","~")}</th>`).join("")}</tr></thead><tbody>`;
+  rows.forEach(([s,vs])=>h+=`<tr${s==="전체"?' class="fsep"':""}><td data-s="${s}" style="cursor:pointer">${s==="전체"?"합계":s}</td>${vs.map((v,j)=>{
+    const sel=s===fl.sec&&cols[j]===fl.ten?";outline:2px solid var(--amber);outline-offset:-2px":"";
+    const st=j===0||s==="전체"?"font-weight:600":div?heat(v,mx,true):heat(v,mx,false);
+    return `<td class="heat" data-s="${s}" data-t="${cols[j]}" style="cursor:pointer;${st}${sel}">${fmt(v)}</td>`;}).join("")}</tr>`);
+  $("#flMx").innerHTML=h+"</tbody>";
+}
+function drawFlWho(){
+  const w=flWin();
+  $("#flWhoTitle").textContent=`섹터별 ${flPerLabel()} 순매수 · 전 만기`;
+  $("#flWhoNote").textContent=`${FL.dates[w[0]]} ~ ${FL.dates[w[1]]}`;
+  const rows=[...FL.secs,"전체"].map(s=>[s,FL_INVS.map(inv=>flSum(flSer("net",s,inv,"전체"),w))]);
+  const mx=Math.max(1e-9,...rows.filter(r=>r[0]!=="전체").flatMap(r=>r[1]).filter(v=>v!=null).map(Math.abs));
+  let h=`<thead><tr><th></th>${FL_INVS.map(i=>`<th>${i}</th>`).join("")}</tr></thead><tbody>`;
+  rows.forEach(([s,vs])=>h+=`<tr${s==="전체"?' class="fsep"':""}><td>${s==="전체"?"합계":s}</td>${vs.map((v,j)=>{
+    const sel=s===fl.sec&&FL_INVS[j]===fl.inv?";outline:2px solid var(--amber);outline-offset:-2px":"";
+    return `<td class="heat" data-s="${s}" data-i="${FL_INVS[j]}" style="cursor:pointer;${s==="전체"?"font-weight:600":heat(v,mx,true)}${sel}">${fJs(v)}</td>`;}).join("")}</tr>`);
+  $("#flWho").innerHTML=h+"</tbody>";
+}
+// 섹터별 순매수 누적 막대: 투자자마다 섹터를 쌓음 (순매수는 0 위로, 순매도는 0 아래로), ◆ = 합계
+const FL_SEC_COL={국고채:PAL[1],통안증권:"#7dd3fc",공사공단채:PAL[2],지방채:PAL[8],은행채:PAL[0],카드채:PAL[3],기타금융채:PAL[5],회사채:PAL[6]};
+let flStkHit=[];
+function drawFlStk(){
+  const cv=$("#flStk");if(!cv||!cv.clientWidth)return;
+  $("#flStkLeg").innerHTML=FL.secs.map(s=>`<span><i style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${FL_SEC_COL[s]||PAL[9]};margin-right:4px;vertical-align:-1px"></i>${s}</span>`).join("")+
+    `<span>◆ 합계</span>`;
+  // 왼쪽 표 패널과 높이를 맞춤 (두 칸일 때만; 한 칸으로 쌓이면 기본 높이)
+  const lp=$("#flWhoPanel"),rp=$("#flStkPanel");
+  if(lp.offsetTop===rp.offsetTop){cv.style.height="200px";const other=rp.offsetHeight-cv.offsetHeight;cv.style.height=Math.max(240,lp.offsetHeight-other)+"px";}
+  else cv.style.height="300px";
+  const dpr=devicePixelRatio||1,W=cv.clientWidth,H=cv.clientHeight;cv.width=W*dpr;cv.height=H*dpr;
+  const c=cv.getContext("2d");c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,W,H);
+  const w=flWin(),fg=css("--fg"),mu=css("--axis"),gr=css("--grid");
+  const data=FL_INVS.map(inv=>({inv,parts:FL.secs.map(s=>({s,v:flSum(flSer("net",s,inv,"전체"),w)||0}))}));
+  data.forEach(d=>{d.pos=d.parts.reduce((a,p)=>a+Math.max(0,p.v),0);d.neg=d.parts.reduce((a,p)=>a+Math.min(0,p.v),0);d.tot=d.pos+d.neg;});
+  let hi=Math.max(0,...data.map(d=>d.pos))/1e4,lo=Math.min(0,...data.map(d=>d.neg))/1e4;if(hi===lo)hi=lo+1;
+  const st=rtNice(hi-lo,[0.05,0.1,0.2,0.5,1,2,5,10,20,50,100]);hi=Math.ceil(hi/st)*st;lo=Math.floor(lo/st)*st;
+  const L=52,R=12,T=14,B=30,ph=H-T-B,pw=W-L-R,Y=v=>T+(hi-v)/(hi-lo)*ph;
+  c.font="12px sans-serif";c.textAlign="right";c.textBaseline="middle";
+  for(let v=lo;v<=hi+st/2;v+=st){const y=Y(v);c.strokeStyle=gr;c.lineWidth=1;c.beginPath();c.moveTo(L,y);c.lineTo(W-R,y);c.stroke();c.fillStyle=mu;c.fillText(+v.toFixed(2)+"조",L-6,y);}
+  c.strokeStyle=fg;c.globalAlpha=.6;c.beginPath();c.moveTo(L,Y(0));c.lineTo(W-R,Y(0));c.stroke();c.globalAlpha=1;
+  const slot=pw/data.length,bw=Math.min(70,slot*.55);flStkHit=[];
+  data.forEach((d,k)=>{const x=L+slot*k+(slot-bw)/2;let up=0,dn=0;
+    for(const p of d.parts){if(!p.v)continue;const a=p.v/1e4;let y0,y1;
+      if(a>0){y0=Y(up+a);y1=Y(up);up+=a;}else{y0=Y(dn);y1=Y(dn+a);dn+=a;}
+      c.fillStyle=FL_SEC_COL[p.s]||PAL[9];c.fillRect(x,y0,bw,Math.max(1,y1-y0));
+      if(d.inv===fl.inv&&p.s===fl.sec){c.strokeStyle=css("--amber");c.lineWidth=2.5;c.strokeRect(x+1,y0+1,bw-2,Math.max(1,y1-y0)-2);}
+      flStkHit.push({x,y0,y1,w:bw,inv:d.inv,s:p.s,v:p.v,tot:d.tot});}
+    // 합계 ◆ 와 값
+    const ty=Y(d.tot/1e4),cx=x+bw/2;c.fillStyle=fg;c.beginPath();c.moveTo(cx,ty-6);c.lineTo(cx+6,ty);c.lineTo(cx,ty+6);c.lineTo(cx-6,ty);c.closePath();c.fill();
+    c.textAlign="center";c.textBaseline="bottom";c.font="bold 12px sans-serif";c.fillText(fJs(d.tot),cx,Math.max(T+12,Y(up)-4));
+    c.textBaseline="top";c.font=(d.inv===fl.inv?"bold ":"")+"13px sans-serif";c.fillStyle=d.inv===fl.inv?css("--amber"):fg;c.fillText(d.inv,cx,H-B+8);});
+}
+$("#flStk").onmousemove=e=>{const r=e.target.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top,tip=$("#flStkTip");
+  const h=flStkHit.find(h=>x>=h.x&&x<=h.x+h.w&&y>=h.y0-1&&y<=h.y1+1);
+  if(!h){tip.style.display="none";return;}
+  tip.innerHTML=`<b>${h.inv} · ${h.s}</b><br>${flPerLabel()} 순매수 <b class="${cls(h.v)}">${fJs(h.v)}조</b><br><span class="hint">${h.inv} 합계 ${fJs(h.tot)}조</span>`;
+  tip.style.display="block";tip.style.left=Math.min(x+12,r.width-170)+"px";tip.style.top=Math.max(0,y-10)+"px";};
+$("#flStk").onmouseleave=()=>{$("#flStkTip").style.display="none";};
+$("#flStk").onclick=e=>{const r=e.target.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;
+  const h=flStkHit.find(h=>x>=h.x&&x<=h.x+h.w&&y>=h.y0-1&&y<=h.y1+1);if(!h)return;fl.inv=h.inv;fl.sec=h.s;fl.ten="전체";flSave();renders.flow();};
+function drawFlow(){drawFlCards();drawFlMx();drawFlWho();drawFlStk();drawFlNet();}
+$("#flInv").onclick=e=>{const b=e.target.closest("button");if(!b)return;fl.inv=b.dataset.i;flSave();renders.flow();};
+$("#flCards").onclick=e=>{const c=e.target.closest(".card");if(!c)return;fl.inv=c.dataset.inv;flSave();renders.flow();};
+$("#flPer").onclick=e=>{const b=e.target.closest("button");if(!b)return;fl.per=b.dataset.p;flSave();renders.flow();};
+$("#flMet").onclick=e=>{const b=e.target.closest("button");if(!b)return;fl.met=b.dataset.m;flSave();renders.flow();};
+$("#flTm").onclick=e=>{const b=e.target.closest("button");if(!b)return;fl.tm=b.dataset.m;flSave();renders.flow();};
+$("#flMx").onclick=e=>{const c=e.target.closest("td[data-s]");if(!c)return;fl.sec=c.dataset.s;fl.ten=c.dataset.t||"전체";flSave();drawFlMx();drawFlWho();drawFlNet();};
+$("#flWho").onclick=e=>{const c=e.target.closest("td[data-i]");if(!c)return;fl.sec=c.dataset.s;fl.inv=c.dataset.i;fl.ten="전체";flSave();renders.flow();};
+$("#flA").onchange=$("#flB").onchange=()=>{fl.a=$("#flA").value||null;fl.b=$("#flB").value||null;fl.per="기간설정";flSave();renders.flow();};
+renders.flow=()=>{
+  if(!FL){$("#flCards").innerHTML='<p class="hint">수급 데이터가 없습니다. 플랫폼 폴더에 투자자별.xlsx 를 두고 업데이트.bat 을 실행하세요.</p>';return;}
+  if(!FL_TS){FL_TS=FL.dates.map(d=>Date.parse(d+"T00:00:00")/1000);
+    const ref=flSer("bal","전체","외국인","전체");FL_L=FL.dates.length-1;while(FL_L>0&&ref&&ref[FL_L]==null)FL_L--;}
+  $("#flInv").innerHTML=FL_INVS.map(i=>`<button data-i="${i}" class="${i===fl.inv?"on":""}">${i}</button>`).join("");
+  $("#flPer").innerHTML=FL_PERS.map(p=>`<button data-p="${p}" class="${p===fl.per?"on":""}">${p}</button>`).join("");
+  const w=flWin();$("#flCustom").style.display=fl.per==="기간설정"?"":"none";
+  for(const [id,v] of [["#flA",FL.dates[w[0]]],["#flB",FL.dates[w[1]]]]){const el=$(id);el.min=FL.dates[0];el.max=FL.dates[FL_L];el.value=v;}
+  $$("#flMet button").forEach(b=>b.classList.toggle("on",b.dataset.m===fl.met));
+  $$("#flTm button").forEach(b=>b.classList.toggle("on",b.dataset.m===fl.tm));
+  $("#flAsOf").textContent=`기준 ${FL.dates[FL_L]} 주 · ${FL.dates[w[0]]} ~ ${FL.dates[w[1]]} (${w[1]-w[0]+1}주) · 단위 조원`;
+  drawFlow();drawFlPos();
 };
 
 renders.dash();
