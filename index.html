@@ -2522,17 +2522,13 @@ function drawKfCharts(){
   // X축은 선물 데이터 시작일부터 (드래그로 축소해도 그 이전으로는 안 나감)
   const s0=D.ix[0],X=TS.slice(s0);i0=Math.max(i0,s0);if(i1<i0)i1=LAST;
   const G=a=>{const v=new Array(N-s0).fill(null);D.ix.forEach((i,k)=>v[i-s0]=a[k]);return v;};
-  const R=n=>BYNAME[n]?BYNAME[n].v.slice(s0):null;
   // 국면 배경
   const regions=[];let st=null;
   for(let k=0;k<D.p.length;k++){if(D.above[k]==null)continue;if(st==null||D.above[k]!==D.above[st]){if(st!=null)regions.push([TS[D.ix[st]],TS[D.ix[k]],D.above[st]?"rgba(22,163,74,.10)":"rgba(220,38,38,.08)"]);st=k;}}
   if(st!=null)regions.push([TS[D.ix[st]],TS[D.ix[D.p.length-1]]+86400,D.above[st]?"rgba(22,163,74,.10)":"rgba(220,38,38,.08)"]);
   $("#kfTitle").textContent=`${kf.prod==="3Y"?"3년":"10년"} 국채선물 수정가 · ${kf.ma}일선 · CTA 국면`;
-  // 우축: 같은 만기 국고 금리 + 기준금리 (%)
-  const yn=`국고채권 ${kf.prod}`,rl=[[yn,PAL[3],false],["기준금리",PAL[8],true]].filter(([n])=>R(n))
-    .map(([n,c,step])=>({label:`${n} (%, 우)`,color:c,x:X,y:R(n),width:step?2:1.5,step,y2:true}));
-  tsChart("kfPrice",[{label:"수정가",color:PAL[1],x:X,y:G(D.p),width:1.8},{label:`${kf.ma}일선`,color:PAL[0],x:X,y:G(D.m),width:1.6,dash:[6,4]},...rl],
-    {height:360,init:[TS[i0],TS[i1]],sync:"kf",regions,ysize:70,y2unit:"%",y2size:74,padR:rl.length?null:74});
+  tsChart("kfPrice",[{label:"수정가",color:PAL[1],x:X,y:G(D.p),width:1.8},{label:`${kf.ma}일선`,color:PAL[0],x:X,y:G(D.m),width:1.6,dash:[6,4]}],
+    {height:360,init:[TS[i0],TS[i1]],sync:"kf",regions,ysize:70,padR:74});
   const pos=D.f.map(v=>v>0?v:null),neg=D.f.map(v=>v<0?v:null),c20=D.f.map((_,k)=>k<19?null:kfSum(D.f,k-19,k));
   // 기간 누적: 기간 버튼(또는 날짜)으로 고른 시작일부터 누적 — 기간을 바꾸면 다시 0부터
   let kS=D.ix.findIndex(i=>i>=i0);if(kS<0)kS=0;let kE=D.ix.length-1;while(kE>0&&D.ix[kE]>i1)kE--;
