@@ -170,6 +170,8 @@ tr:hover td{background:var(--hover)}
 /* 섹터 × 만기 줄: 오른쪽 차트 패널과 높이를 맞추고 남는 높이는 표 행이 나눠 가짐 */
 .usgrid.flstretch{align-items:stretch}
 .flposgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px}
+.flshgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(520px,1fr));gap:12px}
+.flshgrid>.panel{min-width:0;margin:0}
 .flposgrid h3{margin:0 0 2px;font-size:13px;font-weight:600}
 .flposgrid .chart{min-height:0}
 .usgrid.flstretch>.panel:first-child{display:flex;flex-direction:column}
@@ -505,12 +507,33 @@ tr:hover td{background:var(--hover)}
         <div class="chart" id="flNet" style="min-height:0"></div>
       </div>
     </div>
-    <div class="cards" id="flCards"></div>
+    <div id="flCards"></div>
     <div class="panel">
       <div class="row" style="justify-content:space-between"><h2>투자자별 포지션 추이 (채권 전체)</h2><div class="seg" id="flMet"><button data-m="bal">잔고</button><button data-m="dur">듀레이션</button><button data-m="delta">델타</button></div></div>
       <div class="flposgrid" id="flPosGrid"></div>
       <p class="hint" style="margin:6px 0 0">기관마다 세로축이 따로입니다. 다섯 차트는 함께 확대·축소되고, 더블클릭하면 전체 기간으로 돌아갑니다.</p>
     </div>
+    <div class="flshgrid">
+      <div class="panel">
+        <div class="row" style="justify-content:space-between"><h2 id="flShTitle0" style="font-size:14px">잔고 비중 추이</h2><span class="hint" id="flShNow0"></span></div>
+        <div style="display:flex;flex-direction:column;gap:4px;margin:4px 0 6px">
+          <span><label class="lbl">투자자</label><span class="seg" id="flShInv0" data-k="0"></span></span>
+          <span><label class="lbl">섹터</label><span class="seg" id="flShSec0" data-k="0"></span></span>
+          <span><label class="lbl">만기</label><span class="seg" id="flShTen0" data-k="0"></span></span>
+        </div>
+        <div class="chart" id="flShare0" style="min-height:0"></div>
+      </div>
+      <div class="panel">
+        <div class="row" style="justify-content:space-between"><h2 id="flShTitle1" style="font-size:14px">잔고 비중 추이</h2><span class="hint" id="flShNow1"></span></div>
+        <div style="display:flex;flex-direction:column;gap:4px;margin:4px 0 6px">
+          <span><label class="lbl">투자자</label><span class="seg" id="flShInv1" data-k="1"></span></span>
+          <span><label class="lbl">섹터</label><span class="seg" id="flShSec1" data-k="1"></span></span>
+          <span><label class="lbl">만기</label><span class="seg" id="flShTen1" data-k="1"></span></span>
+        </div>
+        <div class="chart" id="flShare1" style="min-height:0"></div>
+      </div>
+    </div>
+    <p class="hint" style="margin:6px 0 0">잔고 비중 = 고른 섹터·만기 잔고 ÷ 그 투자자의 채권 전체 잔고. 두 차트는 따로 고를 수 있습니다. 섹터·만기는 여러 개 고를 수 있고, '전체'를 누르면 모두 선택됩니다. 통안증권은 3년 이하 구간만 있습니다. 위 포지션 차트와 함께 확대·축소됩니다.</p>
     <p class="hint">출처: 인포맥스 채권(장외) 투자주체별 잔고/거래, 주간(주말 기준일). WTD = 최근 1주, MTD·QTD·YTD = 그 달·분기·연도에 속한 주 합계. 잔고는 순매도종목 제외 잔고. 운용 = 투신 + 사모펀드 (듀레이션·델타는 투신 기준). 델타 = 금리 1bp 변화당 평가손익(억원).</p>
   </section>
 
@@ -819,7 +842,7 @@ function rangeBar(el,key,def,onChange){
 /* ---------- 차트 ---------- */
 const plots={};
 function axis(extra){const g=css("--grid"),m=css("--axis");return Object.assign({stroke:m,grid:{stroke:g,width:1},ticks:{stroke:g,width:1}},extra||{});}
-function tsChart(id,lines,{unit="%",height=380,zero=false,init=null,sync=null,shade=null,bands=null,onCursor=null,y2unit="bp",regions=null,ysize=null,padR=null,y2size=null,dec:decOpt=null,adec=null,cursorSync=true}={}){
+function tsChart(id,lines,{unit="%",height=380,zero=false,init=null,sync=null,shade=null,bands=null,onCursor=null,y2unit="bp",regions=null,ysize=null,padR=null,y2size=null,dec:decOpt=null,adec=null,cursorSync=true,yrange=null}={}){
   const el=document.getElementById(id);
   if(plots[id]){plots[id].destroy();delete plots[id];}
   el.innerHTML="";
@@ -835,13 +858,14 @@ function tsChart(id,lines,{unit="%",height=380,zero=false,init=null,sync=null,sh
         // bars: 막대 (외국인 순매수 등)
         paths:l.bars?uPlot.paths.bars({size:l.barSize||[0.75,12]}):l.step&&uPlot.paths.stepped?uPlot.paths.stepped({align:1}):undefined,
         ...(l.bars?{fill:l.color,width:0,points:{show:false}}:{}),
-        value:(u,v)=>v==null?"-":l.y2?fmtU(v,y2unit,3):unit==="계약"?fmtU(v,unit):v.toFixed(dec)+suf}))],
+        value:(u,v,si,i)=>l.val?l.val(i):v==null?"-":l.y2?fmtU(v,y2unit,3):unit==="계약"?fmtU(v,unit):v.toFixed(dec)+suf}))],
     axes:[axis(),axis({size:ysize||(unit==="계약"?70:58),values:(u,vs)=>vs.map(v=>unit==="bp"?v.toFixed(0):unit==="회"?v.toFixed(1)+"회":unit==="계약"?Math.round(v).toLocaleString():adec!=null?v.toLocaleString(undefined,{minimumFractionDigits:adec,maximumFractionDigits:adec}):v.toFixed(2))})],
     // cursorSync:false 면 커서·드래그 선택은 차트마다 따로 (확대·축소 범위는 아래 setScale 훅으로 계속 맞춤)
     cursor:{drag:{x:true,y:false,setScale:false},sync:sync&&cursorSync?{key:sync}:undefined,
       // 더블클릭: 기간 선택 바에서 고른 구간으로 복귀
       bind:{dblclick:u=>()=>{if(init)u.setScale("x",{min:init[0],max:init[1]});else u.setScale("x",{min:u.data[0][0],max:u.data[0][u.data[0].length-1]});return null;}}},
   };
+  if(yrange)opts.scales.y={range:()=>yrange};   // 세로축 고정 (예: 비중 0~100%)
   if(lines.some(l=>l.y2)){opts.scales.y2={auto:true};
     opts.axes.push(axis({scale:"y2",side:1,size:y2size||(y2unit==="계약"?74:54),grid:{show:false},values:(u,vs)=>vs.map(v=>y2unit==="bp"?v.toFixed(0)+"bp":y2unit==="계약"?Math.round(v).toLocaleString():v.toFixed(2))}));}
   opts.hooks={setSelect:[dragZoom],ready:[u=>u.over.addEventListener("mousedown",e=>{if(e.button)return;u._downX=e.clientX-u.over.getBoundingClientRect().left;DRAG_PLOT=u;})],
@@ -2620,15 +2644,34 @@ const flPerLabel=()=>{const w=flWin();return fl.per==="기간설정"?`${FL.dates
 const flSum=(arr,[a,b])=>{if(!arr)return null;let s=0,c=0;for(let i=a;i<=b;i++)if(arr[i]!=null){s+=arr[i];c++;}return c?s:null;};
 const flLastOf=arr=>{if(!arr)return null;for(let i=FL_L;i>=0;i--)if(arr[i]!=null)return arr[i];return null;};
 
-function drawFlCards(){
-  const w=flWin();
-  $("#flCards").innerHTML=FL_INVS.map(inv=>{
-    const b=flLastOf(flPos("bal",inv)),d=flLastOf(flPos("dur",inv)),dl=flLastOf(flPos("delta",inv)),nt=flSum(flSer("net","전체",inv,"전체"),w);
-    return `<div class="card" data-inv="${inv}" style="cursor:pointer;${inv===fl.inv?"outline:2px solid var(--accent)":""}"><div class="k">${inv}${FL_POSN[inv]?" (포지션: 투신)":""}</div>`+
-      `<div class="v">${fJo(b)}<span style="font-size:13px;font-weight:400"> 조</span></div>`+
-      `<div class="c">듀레이션 ${d==null?"-":d.toFixed(2)} · 델타 ${dl==null?"-":Math.round(dl).toLocaleString()}억/bp</div>`+
-      `<div class="c ${cls(nt)}">${flPerLabel()} 순매수 ${fJs(nt)}조</div></div>`;}).join("");
+// 잔고 비중 추이: 투자자 1 + 섹터(복수) + 만기(복수) -> 그 묶음 잔고 ÷ 투자자 채권 전체 잔고
+const flShTens=()=>["1Y이하",...FL.tens.filter(t=>t!=="전체"&&!FL_TEN_PARTS["1Y이하"].includes(t))];
+// 두 칸이 따로 고름: fl.sh[k] = {i:투자자, s:[섹터], t:[만기]} (빈 배열 = 전체)
+function flShSt(k){
+  if(!Array.isArray(fl.sh))fl.sh=[{i:fl.shi||"외국인",s:fl.shs||[],t:fl.sht||[]},{i:"은행",s:[],t:[]}];
+  return fl.sh[k];}
+function drawFlShare(){[0,1].forEach(drawFlShareOne);}
+function drawFlShareOne(k){
+  const st=flShSt(k),inv=FL_INVS.includes(st.i)?st.i:FL_INVS[0],TN=flShTens();
+  const secs=(st.s||[]).filter(s=>FL.secs.includes(s)),tens=(st.t||[]).filter(t=>TN.includes(t));
+  const S=secs.length?secs:FL.secs,T=tens.length?tens:TN,allT=T.length===TN.length;
+  const btn=(attr,v,on,lab)=>`<button data-${attr}="${v}" class="${on?"on":""}">${lab}</button>`;
+  $("#flShInv"+k).innerHTML=FL_INVS.map(i=>btn("i",i,i===inv,i)).join("");
+  $("#flShSec"+k).innerHTML=btn("s","*",!secs.length,"전체")+FL.secs.map(s=>btn("s",s,secs.includes(s),s.replace("공사공단채","공사채").replace("기타금융채","기타금융"))).join("");
+  $("#flShTen"+k).innerHTML=btn("t","*",!tens.length,"전체")+TN.map(t=>btn("t",t,tens.includes(t),t.replace("_","~"))).join("");
+  // 만기를 전부 고른 경우엔 섹터별 '전체' 열을 써서 구간 합과의 작은 차이를 피함
+  const num=flAdd(S.map(s=>allT?flSer("bal",s,inv,"전체"):flAdd(T.map(t=>flSer("bal",s,inv,t))))),den=flSer("bal","전체",inv,"전체");
+  const sh=num&&den?num.map((v,i)=>v==null||!den[i]?null:v/den[i]*100):[];
+  const lab=`${secs.length?secs.join("+"):"채권 전체"} · ${tens.length?tens.map(t=>t.replace("_","~")).join("+"):"전 만기"}`;
+  $("#flShTitle"+k).textContent=`${inv} 잔고 비중 · ${lab}`;
+  const L=sh.length?(()=>{let j=sh.length-1;while(j>0&&sh[j]==null)j--;return j;})():-1;
+  $("#flShNow"+k).textContent=L>=0?`${FL.dates[L]} ${sh[L].toFixed(1)}% · ${fJo(num[L])}조`:"";
+  tsChart("flShare"+k,sh.length?[{label:"비중 (%)",color:PAL[k?2:0],x:FL_TS,y:sh,width:2},
+    {label:"잔고 (조, 우)",color:"rgba(128,128,128,.7)",x:FL_TS,y:num.map(v=>v==null?null:v/1e4),width:1.2,dash:[5,4],y2:true}]:[],
+    {unit:"%",dec:1,adec:1,y2unit:"조",height:260,ysize:50,sync:"flpos",cursorSync:false});
 }
+// 섹터·만기 다중 선택: '전체' = 선택 해제(모두), 같은 걸 다시 누르면 빠짐
+const flToggle=(arr,v)=>v==="*"?[]:arr.includes(v)?arr.filter(x=>x!==v):[...arr,v];
 // 기관별 작은 차트 5개: 축을 따로 써서 각자의 변화가 보이게 (x축은 함께 움직임)
 function drawFlPos(){
   const unit=fl.met==="bal"?"조":fl.met==="dur"?"년":"억/bp",conv=v=>v==null?null:fl.met==="bal"?v/1e4:v;
@@ -2674,7 +2717,8 @@ function drawFlMx(){
   let h=`<colgroup><col style="width:96px">${cols.map(()=>"<col>").join("")}</colgroup><thead><tr><th>${FL.dates[FL_L]}</th>${cols.map(t=>`<th>${t==="전체"?"전체":t.replace("_","~")}</th>`).join("")}</tr></thead><tbody>`;
   rows.forEach(([s,vs])=>h+=`<tr${s==="전체"?' class="fsep"':""}><td data-s="${s}" style="cursor:pointer">${s==="전체"?"합계":s}</td>${vs.map((v,j)=>{
     const sel=s===fl.sec&&cols[j]===fl.ten?";outline:2px solid var(--amber);outline-offset:-2px":"";
-    const st=j===0||s==="전체"?"font-weight:600":div?heat(v,mx,true):heat(v,mx,false);
+    // 순매수·잔고 변화는 +빨강/−파랑, 잔고·비중은 클수록 진한 빨강
+    const st=j===0||s==="전체"?"font-weight:600":heat(v,mx,true);
     return `<td class="heat" data-s="${s}" data-t="${cols[j]}" style="cursor:pointer;${st}${sel}">${fmt(v)}</td>`;}).join("")}</tr>`);
   $("#flMx").innerHTML=h+"</tbody>";
 }
@@ -2732,9 +2776,12 @@ $("#flStk").onmousemove=e=>{const r=e.target.getBoundingClientRect(),x=e.clientX
 $("#flStk").onmouseleave=()=>{$("#flStkTip").style.display="none";};
 $("#flStk").onclick=e=>{const r=e.target.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;
   const h=flStkHit.find(h=>x>=h.x&&x<=h.x+h.w&&y>=h.y0-1&&y<=h.y1+1);if(!h)return;fl.inv=h.inv;fl.sec=h.s;fl.ten="전체";flSave();renders.flow();};
-function drawFlow(){drawFlCards();drawFlMx();drawFlWho();drawFlStk();drawFlNet();}
+function drawFlow(){drawFlMx();drawFlWho();drawFlStk();drawFlNet();}
 $("#flInv").onclick=e=>{const b=e.target.closest("button");if(!b)return;fl.inv=b.dataset.i;flSave();renders.flow();};
-$("#flCards").onclick=e=>{const c=e.target.closest(".card");if(!c)return;fl.inv=c.dataset.inv;flSave();renders.flow();};
+[0,1].forEach(k=>{
+  $("#flShInv"+k).onclick=e=>{const b=e.target.closest("button");if(!b)return;flShSt(k).i=b.dataset.i;flSave();drawFlShareOne(k);};
+  $("#flShSec"+k).onclick=e=>{const b=e.target.closest("button");if(!b)return;const st=flShSt(k);st.s=flToggle(st.s||[],b.dataset.s);if(st.s.length===FL.secs.length)st.s=[];flSave();drawFlShareOne(k);};
+  $("#flShTen"+k).onclick=e=>{const b=e.target.closest("button");if(!b)return;const st=flShSt(k);st.t=flToggle(st.t||[],b.dataset.t);if(st.t.length===flShTens().length)st.t=[];flSave();drawFlShareOne(k);};});
 $("#flPer").onclick=e=>{const b=e.target.closest("button");if(!b)return;fl.per=b.dataset.p;flSave();renders.flow();};
 $("#flMet").onclick=e=>{const b=e.target.closest("button");if(!b)return;fl.met=b.dataset.m;flSave();renders.flow();};
 $("#flTm").onclick=e=>{const b=e.target.closest("button");if(!b)return;fl.tm=b.dataset.m;flSave();renders.flow();};
@@ -2752,7 +2799,7 @@ renders.flow=()=>{
   $$("#flMet button").forEach(b=>b.classList.toggle("on",b.dataset.m===fl.met));
   $$("#flTm button").forEach(b=>b.classList.toggle("on",b.dataset.m===fl.tm));
   $("#flAsOf").textContent=`기준 ${FL.dates[FL_L]} 주 · ${FL.dates[w[0]]} ~ ${FL.dates[w[1]]} (${w[1]-w[0]+1}주) · 단위 조원`;
-  drawFlow();drawFlPos();
+  drawFlow();drawFlPos();drawFlShare();
 };
 
 renders.dash();
