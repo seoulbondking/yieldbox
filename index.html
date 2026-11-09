@@ -511,7 +511,7 @@ tr:hover td{background:var(--hover)}
     <div class="panel">
       <div class="row" style="justify-content:space-between"><h2>투자자별 포지션 추이 (채권 전체)</h2><div class="seg" id="flMet"><button data-m="bal">잔고</button><button data-m="dur">듀레이션</button><button data-m="delta">델타</button></div></div>
       <div class="flposgrid" id="flPosGrid"></div>
-      <p class="hint" style="margin:6px 0 0">기관마다 세로축이 따로입니다. 다섯 차트는 함께 확대·축소되고, 더블클릭하면 전체 기간으로 돌아갑니다.</p>
+      <p class="hint" style="margin:6px 0 0">기관마다 세로축이 따로입니다. 처음엔 2025년부터 보이고, 드래그로 구간을 바꾸면 다섯 차트와 아래 잔고 비중 차트가 함께 바뀝니다. 잔고·듀레이션·델타를 바꿔도 그 구간이 유지되고, 더블클릭하면 2025년부터로 돌아갑니다.</p>
     </div>
     <div class="flshgrid">
       <div class="panel">
@@ -2617,9 +2617,11 @@ function drawFlShareOne(k){
   $("#flShTitle"+k).textContent=`${inv} 잔고 비중 · ${lab}`;
   const L=sh.length?(()=>{let j=sh.length-1;while(j>0&&sh[j]==null)j--;return j;})():-1;
   $("#flShNow"+k).textContent=L>=0?`${FL.dates[L]} ${sh[L].toFixed(1)}% · ${fJo(num[L])}조`:"";
+  const keep=flPosView();
   tsChart("flShare"+k,sh.length?[{label:"비중 (%)",color:PAL[k?2:0],x:FL_TS,y:sh,width:2},
     {label:"잔고 (조, 우)",color:"rgba(128,128,128,.7)",x:FL_TS,y:num.map(v=>v==null?null:v/1e4),width:1.2,dash:[5,4],y2:true}]:[],
-    {unit:"%",dec:1,adec:1,y2unit:"조",height:260,ysize:50,sync:"flpos",cursorSync:false});
+    {unit:"%",dec:1,adec:1,y2unit:"조",height:260,ysize:50,sync:"flpos",cursorSync:false,init:flPosDef()});
+  flPosApply("flShare"+k,keep);
 }
 // 섹터·만기 다중 선택: '전체' = 선택 해제(모두), 같은 걸 다시 누르면 빠짐
 const flToggle=(arr,v)=>v==="*"?[]:arr.includes(v)?arr.filter(x=>x!==v):[...arr,v];
@@ -2629,13 +2631,20 @@ function drawFlPos(){
   const fmt=v=>v==null?"-":fl.met==="bal"?v.toFixed(1)+"조":fl.met==="dur"?v.toFixed(2)+"년":Math.round(v).toLocaleString()+"억/bp";
   const fmtD=v=>v==null?"-":(v>0?"+":"")+(fl.met==="bal"?v.toFixed(1):fl.met==="dur"?v.toFixed(2):Math.round(v).toLocaleString());
   const g=$("#flPosGrid");
+  // 지금 보고 있는 구간(드래그로 바꾼 것 포함)을 잡아 두었다가 다시 그릴 때 그대로 적용
+  const keep=flPosView();
   g.innerHTML=FL_INVS.map((inv,k)=>`<div><h3 id="flPosH${k}"></h3><div class="chart" id="flPos${k}"></div></div>`).join("");
   FL_INVS.forEach((inv,k)=>{const a=flPos(fl.met,inv);if(!a)return;const y=a.map(conv);
     let L=y.length-1;while(L>0&&y[L]==null)L--;let P=L;while(P>0&&FL.dates[P]>((+FL.dates[L].slice(0,4)-1)+FL.dates[L].slice(4)))P--;
     const d=y[L]!=null&&y[P]!=null?y[L]-y[P]:null;
     $("#flPosH"+k).innerHTML=`<span style="color:${PAL[k]}">●</span> ${inv}${FL_POSN[inv]?" (투신)":""} <span style="font-weight:400">${fmt(y[L])}</span> <span class="${cls(d)}" style="font-weight:400">1Y ${fmtD(d)}</span>`;
-    tsChart("flPos"+k,[{label:inv,color:PAL[k],x:FL_TS,y,width:inv===fl.inv?2.4:1.8}],{unit,dec:fl.met==="dur"?2:fl.met==="bal"?1:0,adec:fl.met==="dur"?1:0,height:200,ysize:58,sync:"flpos",cursorSync:false});});
+    tsChart("flPos"+k,[{label:inv,color:PAL[k],x:FL_TS,y,width:inv===fl.inv?2.4:1.8}],{unit,dec:fl.met==="dur"?2:fl.met==="bal"?1:0,adec:fl.met==="dur"?1:0,height:200,ysize:58,sync:"flpos",cursorSync:false,init:flPosDef()});
+    flPosApply("flPos"+k,keep);});
 }
+// 포지션·잔고 비중 차트(같은 sync 그룹)의 보이는 구간: 기본 2025년~최근, 더블클릭도 여기로 복귀
+const flPosDef=()=>[Date.parse("2025-01-01T00:00:00")/1000,FL_TS[FL_TS.length-1]+4*86400];
+const flPosView=()=>{const u=plots.flPos0||plots.flPos1;return u&&u.scales.x.min!=null?[u.scales.x.min,u.scales.x.max]:flPosDef();};
+const flPosApply=(id,r)=>{const u=plots[id];if(!u||!r)return;u._syncing=true;u.setScale("x",{min:r[0],max:r[1]});u._syncing=false;};
 const flRangeGet=rangeBar($("#flRange"),"fl","3Y",()=>drawFlNet());
 function drawFlNet(){
   const [i0,i1]=flRangeGet(),a=flSer("net",fl.sec,fl.inv,fl.ten);
@@ -2651,7 +2660,8 @@ function drawFlNet(){
   const ls=[{label:"순매수(+)",color:css("--up"),x:X,y:W.map(v=>v>0?v/1e4:null),bars:true,barSize:[0.8,60]},{label:"순매도(−)",color:css("--down"),x:X,y:W.map(v=>v<0?v/1e4:null),bars:true,barSize:[0.8,60]},
     {label:"기간 누적 (우)",color:PAL[5],x:X,y:cum,width:2,y2:true}];
   // 양 끝 막대가 반만 보이지 않게 앞뒤로 반 주씩 여유
-  tsChart("flNet",ls,{unit:"조",y2unit:"조",dec:2,zero:true,height:300,init:[t0-4*86400,t1+4*86400],ysize:64});
+  tsChart("flNet",ls,{unit:"조",y2unit:"조",dec:2,zero:true,height:300,init:[t0-4*86400,Math.max(t1,...X.filter(x=>x<=t1+6*86400))+4*86400],ysize:64});
+  // 막대는 그 주 금요일 위치라, 진행 중인 주(예: 월요일 기준)는 끝날짜보다 오른쪽에 있음 -> 그 금요일까지 보이게
 }
 function drawFlMx(){
   const w=flWin(),inv=fl.inv,tens=["1Y이하",...FL.tens.filter(t=>t!=="전체"&&!FL_TEN_PARTS["1Y이하"].includes(t))],cols=["전체",...tens];
