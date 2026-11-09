@@ -204,14 +204,14 @@ tr:hover td{background:var(--hover)}
   <nav id="nav">
     <button data-tab="dash" class="on">대시보드</button>
     <button data-tab="matrix">매트릭스</button>
-    <button data-tab="ts">시계열</button>
     <button data-tab="spread">스프레드</button>
-    <button data-tab="curve">커브</button>
-    <button data-tab="ust">기간프리미엄</button>
-    <button data-tab="fwd">선도금리</button>
-    <button data-tab="kfut">국채선물</button>
     <button data-tab="flow">수급</button>
     <button data-tab="roll">롤다운</button>
+    <button data-tab="kfut">국채선물</button>
+    <button data-tab="fwd">선도금리</button>
+    <button data-tab="ust">기간프리미엄</button>
+    <button data-tab="ts">시계열</button>
+    <button data-tab="curve">커브</button>
     <button data-tab="table">데이터</button>
   </nav>
   <div class="spacer"></div>
@@ -552,18 +552,7 @@ tr:hover td{background:var(--hover)}
       <div class="chart" id="kfOI" style="min-height:200px;margin-top:6px"></div>
       <p class="hint" style="margin:6px 0 0">배경: 초록 = 수정가가 이동평균 위(추세추종 매수 국면), 빨강 = 아래(매도 국면). 둘째 차트: 외국인 일별 순매수(막대), 20일 누적·기간 누적(선, 우축). 기간 누적은 기간 버튼으로 고른 시작일부터 다시 0에서 쌓입니다. 셋째 차트: 미결제약정 잔고(선)와 일별 증감(막대, 우축). 차트들은 함께 확대·축소됩니다.</p>
     </div>
-    <div class="usgrid">
-      <div class="panel">
-        <div class="row" style="justify-content:space-between"><h2>외국인 순매수와의 연관성</h2><span class="hint" id="kfRelNote"></span></div>
-        <div class="tblwrap" style="max-height:none"><table id="kfRel"></table></div>
-        <div class="chart" id="kfCorr" style="min-height:200px;margin-top:10px"></div>
-      </div>
-      <div class="panel">
-        <div class="row" style="justify-content:space-between"><h2>이동평균 돌파 이벤트 (최근)</h2><span class="hint">변화: 틱 · 외국인: 계약</span></div>
-        <div class="tblwrap" style="max-height:520px"><table id="kfEv"></table></div>
-      </div>
-    </div>
-    <p class="hint">분석 참고용입니다. 추세추종 성과는 거래비용·슬리피지·롤오버 비용을 반영하지 않은 단순 계산이며, 특정 매매를 권유하지 않습니다.</p>
+    <p class="hint">분석 참고용이며 특정 매매를 권유하지 않습니다.</p>
   </section>
 
   <!-- 선도금리 -->
@@ -2526,7 +2515,6 @@ function kfData(){
   return {ix,p,f,ins,oi,raw,m,above,cross};
 }
 const kfSum=(a,k0,k1)=>{let s=0;for(let k=Math.max(0,k0);k<=Math.min(a.length-1,k1);k++)s+=a[k];return s;};
-const kfCorr=(x,y)=>{const n=x.length;if(n<10)return null;const mx=x.reduce((a,b)=>a+b,0)/n,my=y.reduce((a,b)=>a+b,0)/n;let c=0,vx=0,vy=0;for(let i=0;i<n;i++){c+=(x[i]-mx)*(y[i]-my);vx+=(x[i]-mx)**2;vy+=(y[i]-my)**2;}return vx&&vy?c/Math.sqrt(vx*vy):null;};
 function drawKfCards(D){
   const L=D.p.length-1,i=D.ix[L],t=v=>(v*100).toFixed(1);
   let s=L;while(s>0&&D.above[s-1]===D.above[L])s--;const days=L-s+1;
@@ -2566,43 +2554,6 @@ function drawKfCharts(){
   const dOi=D.oi.map((v,k)=>k&&v!=null&&D.oi[k-1]!=null?v-D.oi[k-1]:null);
   tsChart("kfOI",[{label:"미결제약정",color:PAL[2],x:X,y:G(D.oi),width:1.8},
     {label:"일별 증감 (우)",color:"rgba(128,128,128,.55)",x:X,y:G(dOi),bars:true,y2:true}],{unit:"계약",y2unit:"계약",height:200,init:[TS[i0],TS[i1]],sync:"kf",ysize:70});
-  // 60일 이동 상관 (일별 가격변화 vs 외국인 순매수)
-  const rc=D.p.map((_,k)=>{if(k<61)return null;const x=[],y=[];for(let j=k-59;j<=k;j++){x.push((D.p[j]-D.p[j-1])*100);y.push(D.f[j]);}const r=kfCorr(x,y);return r==null?null:+r.toFixed(3);});
-  tsChart("kfCorr",[{label:"60일 이동 상관 (가격변화 vs 외국인)",color:PAL[5],x:X,y:G(rc),width:1.6}],{height:200,zero:true,init:[TS[i0],TS[i1]],sync:"kf",ysize:70,padR:74});
-  drawKfRel(D,i0,i1);
-}
-function kfStats(D,k0,k1){
-  const dp=[],ff=[],fn=[],dn=[],fi=[],ii=[];
-  for(let k=Math.max(1,k0);k<=k1;k++){dp.push((D.p[k]-D.p[k-1])*100);ff.push(D.f[k]);fi.push(D.f[k]);ii.push(D.ins[k]);if(k<k1){fn.push(D.f[k]);dn.push((D.p[k+1]-D.p[k])*100);}}
-  let fa=0,na=0,fb=0,nb=0,pnl=0,win=0,cnt=0;
-  for(let k=Math.max(1,k0);k<=k1;k++){if(D.above[k]==null)continue;if(D.above[k]){fa+=D.f[k];na++;}else{fb+=D.f[k];nb++;}
-    if(D.above[k-1]!=null){const r=(D.p[k]-D.p[k-1])*100*(D.above[k-1]?1:-1);pnl+=r;cnt++;if(r>0)win++;}}
-  const cr=D.cross.filter(k=>k>=k0&&k<=k1);
-  const ev=(up,pre)=>{const a=cr.filter(k=>D.above[k]===up).map(k=>pre?kfSum(D.f,k-5,k-1):kfSum(D.f,k,k+4));return a.length?a.reduce((x,y)=>x+y,0)/a.length:null;};
-  return {same:kfCorr(dp,ff),next:kfCorr(fn,dn),fi:kfCorr(fi,ii),fa:na?fa/na:null,fb:nb?fb/nb:null,
-    upPre:ev(true,true),upPost:ev(true,false),dnPre:ev(false,true),dnPost:ev(false,false),nUp:cr.filter(k=>D.above[k]).length,nDn:cr.filter(k=>!D.above[k]).length,
-    pnl,hold:(D.p[k1]-D.p[k0])*100,win:cnt?win/cnt*100:null};
-}
-function drawKfRel(D,i0,i1){
-  let k0=D.ix.findIndex(i=>i>=i0);if(k0<0)k0=0;let k1=D.ix.length-1;while(k1>0&&D.ix[k1]>i1)k1--;
-  const A=kfStats(D,kf.ma,D.p.length-1),B=kfStats(D,Math.max(k0,kf.ma),k1);
-  $("#kfRelNote").textContent=`전체 ${DATES[D.ix[0]].slice(0,4)}~ / 선택 ${DATES[D.ix[k0]].slice(2)}~${DATES[D.ix[k1]].slice(2)}`;
-  const r=v=>v==null?"-":(v>0?"+":"")+v.toFixed(2),c=v=>v==null?"-":Math.round(v).toLocaleString(),t=v=>v==null?"-":(v>0?"+":"")+v.toFixed(0)+"틱";
-  const rows=[["같은 날: 가격변화 vs 외국인 순매수 (상관)",A.same,B.same,r],["예측: 오늘 외국인 → 내일 가격변화 (상관)",A.next,B.next,r],["외국인 vs 기관 순매수 (상관)",A.fi,B.fi,r],
-    [`외국인 일평균: ${kf.ma}일선 위`,A.fa,B.fa,c],[`외국인 일평균: ${kf.ma}일선 아래`,A.fb,B.fb,c],
-    ["상향돌파 직전 5일 외국인 (평균)",A.upPre,B.upPre,c],["상향돌파 직후 5일 외국인 (평균)",A.upPost,B.upPost,c],
-    ["하향돌파 직전 5일 외국인 (평균)",A.dnPre,B.dnPre,c],["하향돌파 직후 5일 외국인 (평균)",A.dnPost,B.dnPost,c],
-    ["돌파 횟수 (상향/하향)",`${A.nUp}/${A.nDn}`,`${B.nUp}/${B.nDn}`,x=>x],
-    [`${kf.ma}일선 추종 누적 (위=매수, 아래=매도)`,A.pnl,B.pnl,t],["단순 보유 누적",A.hold,B.hold,t],["추종 일별 승률",A.win,B.win,v=>v==null?"-":v.toFixed(0)+"%"]];
-  $("#kfRel").innerHTML=`<thead><tr><th>항목</th><th>전체</th><th>선택 기간</th></tr></thead><tbody>`+
-    rows.map(([k,a,b,fmt])=>`<tr><td style="white-space:normal">${k}</td><td class="${typeof a==="number"?cls(a):""}">${fmt(a)}</td><td class="${typeof b==="number"?cls(b):""}">${fmt(b)}</td></tr>`).join("")+"</tbody>";
-  // 돌파 이벤트 표
-  const ev=D.cross.slice(-25).reverse();
-  const fw=(k,h)=>k+h<D.p.length?(D.p[k+h]-D.p[k])*100:null;
-  $("#kfEv").innerHTML=`<thead><tr><th>날짜</th><th>방향</th><th>수정가</th><th>5일 후</th><th>10일 후</th><th>20일 후</th><th>외국인 직전5일</th><th>직후5일</th></tr></thead><tbody>`+
-    ev.map(k=>{const up=D.above[k];const td=v=>`<td class="${cls(v)}">${v==null?"-":(v>0?"+":"")+v.toFixed(0)}</td>`;
-      return `<tr><td>${DATES[D.ix[k]]}</td><td><b style="color:${up?"var(--up)":"var(--down)"}">${up?"▲ 상향":"▼ 하향"}</b></td><td>${D.p[k].toFixed(2)}</td>${td(fw(k,5))}${td(fw(k,10))}${td(fw(k,20))}`+
-        `<td class="${cls(kfSum(D.f,k-5,k-1))}">${Math.round(kfSum(D.f,k-5,k-1)).toLocaleString()}</td><td class="${cls(k+4<D.p.length?kfSum(D.f,k,k+4):null)}">${k+4<D.p.length?Math.round(kfSum(D.f,k,k+4)).toLocaleString():"-"}</td></tr>`;}).join("")+"</tbody>";
 }
 renders.kfut=()=>{
   $$("#kfProd button").forEach(b=>b.classList.toggle("on",b.dataset.p===kf.prod));$("#kfMa").value=kf.ma;
