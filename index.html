@@ -149,6 +149,9 @@ tr:hover td{background:var(--hover)}
 .stat span{color:var(--amber);font-size:10.5px;letter-spacing:.3px}
 .stat b{font-family:var(--mono);font-size:16px}
 .u-legend{font-family:var(--mono);font-size:11px}
+/* 커서를 움직일 때 숫자 길이가 바뀌어 범례가 줄바꿈되며 차트가 들썩이지 않게 값 칸 폭을 고정 */
+.u-legend .u-series .u-value{display:inline-block;min-width:8ch;text-align:right;white-space:nowrap}
+.u-legend .u-series:first-child .u-value{min-width:13ch;text-align:left}
 .smcard,.rdtip{border-radius:2px}
 .smcard .tt{color:var(--amber);font-size:12px}
 .smcard .mt{font-family:var(--mono)}
