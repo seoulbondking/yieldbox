@@ -473,7 +473,8 @@ tr:hover td{background:var(--hover)}
       <div class="row" style="justify-content:space-between"><h2 id="kfTitle">수정가 · 이동평균 · CTA 국면</h2><div id="kfRange"></div></div>
       <div class="chart" id="kfPrice" style="min-height:360px"></div>
       <div class="chart" id="kfFlow" style="min-height:240px;margin-top:6px"></div>
-      <p class="hint" style="margin:6px 0 0">배경: 초록 = 수정가가 이동평균 위(추세추종 매수 국면), 빨강 = 아래(매도 국면). 아래 차트: 외국인 일별 순매수(막대), 20일 누적·기간 누적(선, 우축). 기간 누적은 기간 버튼으로 고른 시작일부터 다시 0에서 쌓입니다. 두 차트는 함께 확대·축소됩니다.</p>
+      <div class="chart" id="kfOI" style="min-height:200px;margin-top:6px"></div>
+      <p class="hint" style="margin:6px 0 0">배경: 초록 = 수정가가 이동평균 위(추세추종 매수 국면), 빨강 = 아래(매도 국면). 우축: 같은 만기 국고 금리와 기준금리(%). 둘째 차트: 외국인 일별 순매수(막대), 20일 누적·기간 누적(선, 우축). 기간 누적은 기간 버튼으로 고른 시작일부터 다시 0에서 쌓입니다. 셋째 차트: 미결제약정 잔고(선)와 일별 증감(막대, 우축). 차트들은 함께 확대·축소됩니다.</p>
     </div>
     <div class="usgrid">
       <div class="panel">
@@ -765,7 +766,7 @@ function rangeBar(el,key,def,onChange){
 /* ---------- 차트 ---------- */
 const plots={};
 function axis(extra){const g=css("--grid"),m=css("--axis");return Object.assign({stroke:m,grid:{stroke:g,width:1},ticks:{stroke:g,width:1}},extra||{});}
-function tsChart(id,lines,{unit="%",height=380,zero=false,init=null,sync=null,shade=null,bands=null,onCursor=null,y2unit="bp",regions=null,ysize=null,padR=null}={}){
+function tsChart(id,lines,{unit="%",height=380,zero=false,init=null,sync=null,shade=null,bands=null,onCursor=null,y2unit="bp",regions=null,ysize=null,padR=null,y2size=null}={}){
   const el=document.getElementById(id);
   if(plots[id]){plots[id].destroy();delete plots[id];}
   el.innerHTML="";
@@ -788,7 +789,7 @@ function tsChart(id,lines,{unit="%",height=380,zero=false,init=null,sync=null,sh
       bind:{dblclick:u=>()=>{if(init)u.setScale("x",{min:init[0],max:init[1]});else u.setScale("x",{min:u.data[0][0],max:u.data[0][u.data[0].length-1]});return null;}}},
   };
   if(lines.some(l=>l.y2)){opts.scales.y2={auto:true};
-    opts.axes.push(axis({scale:"y2",side:1,size:y2unit==="계약"?74:54,grid:{show:false},values:(u,vs)=>vs.map(v=>y2unit==="bp"?v.toFixed(0)+"bp":y2unit==="계약"?Math.round(v).toLocaleString():v.toFixed(2))}));}
+    opts.axes.push(axis({scale:"y2",side:1,size:y2size||(y2unit==="계약"?74:54),grid:{show:false},values:(u,vs)=>vs.map(v=>y2unit==="bp"?v.toFixed(0)+"bp":y2unit==="계약"?Math.round(v).toLocaleString():v.toFixed(2))}));}
   opts.hooks={setSelect:[dragZoom],ready:[u=>u.over.addEventListener("mousedown",e=>{u._downX=e.clientX-u.over.getBoundingClientRect().left;})],
     // 같은 sync 그룹 차트끼리 X축 확대/축소를 맞춤
     setScale:[(u,k)=>{if(k!=="x"||!u._sync||u._syncing)return;for(const p of Object.values(plots))if(p!==u&&p._sync===u._sync&&(p.scales.x.min!==u.scales.x.min||p.scales.x.max!==u.scales.x.max)){p._syncing=true;p.setScale("x",{min:u.scales.x.min,max:u.scales.x.max});p._syncing=false;}}]};
@@ -2454,27 +2455,37 @@ function drawKfCards(D){
     card("미결제약정 5일 변화",doi==null?"-":Math.round(doi).toLocaleString(),cls(doi),D.oi[L]!=null?`잔고 ${Math.round(D.oi[L]).toLocaleString()}`:"");
 }
 function drawKfCharts(){
-  const D=kfData();if(!D)return;const [i0,i1]=kfRangeGet();
-  const G=a=>{const v=new Array(N).fill(null);D.ix.forEach((i,k)=>v[i]=a[k]);return v;};
+  const D=kfData();if(!D)return;let [i0,i1]=kfRangeGet();
+  // X축은 선물 데이터 시작일부터 (드래그로 축소해도 그 이전으로는 안 나감)
+  const s0=D.ix[0],X=TS.slice(s0);i0=Math.max(i0,s0);if(i1<i0)i1=LAST;
+  const G=a=>{const v=new Array(N-s0).fill(null);D.ix.forEach((i,k)=>v[i-s0]=a[k]);return v;};
+  const R=n=>BYNAME[n]?BYNAME[n].v.slice(s0):null;
   // 국면 배경
   const regions=[];let st=null;
   for(let k=0;k<D.p.length;k++){if(D.above[k]==null)continue;if(st==null||D.above[k]!==D.above[st]){if(st!=null)regions.push([TS[D.ix[st]],TS[D.ix[k]],D.above[st]?"rgba(22,163,74,.10)":"rgba(220,38,38,.08)"]);st=k;}}
   if(st!=null)regions.push([TS[D.ix[st]],TS[D.ix[D.p.length-1]]+86400,D.above[st]?"rgba(22,163,74,.10)":"rgba(220,38,38,.08)"]);
   $("#kfTitle").textContent=`${kf.prod==="3Y"?"3년":"10년"} 국채선물 수정가 · ${kf.ma}일선 · CTA 국면`;
-  tsChart("kfPrice",[{label:"수정가",color:PAL[1],x:TS,y:G(D.p),width:1.8},{label:`${kf.ma}일선`,color:PAL[0],x:TS,y:G(D.m),width:1.6,dash:[6,4]}],
-    {height:360,init:[TS[i0],TS[i1]],sync:"kf",regions,ysize:70,padR:74});
+  // 우축: 같은 만기 국고 금리 + 기준금리 (%)
+  const yn=`국고채권 ${kf.prod}`,rl=[[yn,PAL[3],false],["기준금리",PAL[8],true]].filter(([n])=>R(n))
+    .map(([n,c,step])=>({label:`${n} (%, 우)`,color:c,x:X,y:R(n),width:step?2:1.5,step,y2:true}));
+  tsChart("kfPrice",[{label:"수정가",color:PAL[1],x:X,y:G(D.p),width:1.8},{label:`${kf.ma}일선`,color:PAL[0],x:X,y:G(D.m),width:1.6,dash:[6,4]},...rl],
+    {height:360,init:[TS[i0],TS[i1]],sync:"kf",regions,ysize:70,y2unit:"%",y2size:74,padR:rl.length?null:74});
   const pos=D.f.map(v=>v>0?v:null),neg=D.f.map(v=>v<0?v:null),c20=D.f.map((_,k)=>k<19?null:kfSum(D.f,k-19,k));
   // 기간 누적: 기간 버튼(또는 날짜)으로 고른 시작일부터 누적 — 기간을 바꾸면 다시 0부터
   let kS=D.ix.findIndex(i=>i>=i0);if(kS<0)kS=0;let kE=D.ix.length-1;while(kE>0&&D.ix[kE]>i1)kE--;
   let acc=0;const cP=D.f.map((v,k)=>k<kS||k>kE?null:(acc+=v));
   let accI=0;D.ins.forEach((v,k)=>{if(k>=kS&&k<=kE)accI+=v;});
   const pc=$("#kfPerCard");if(pc)pc.innerHTML=`<div class="k">외국인 기간 누적</div><div class="v ${cls(acc)}">${Math.round(acc).toLocaleString()}</div><div class="c hint">${DATES[D.ix[kS]].slice(2)}~${DATES[D.ix[kE]].slice(2)} · 기관 ${Math.round(accI).toLocaleString()}</div>`;
-  tsChart("kfFlow",[{label:"외국인 순매수(+)",color:css("--up"),x:TS,y:G(pos),bars:true},{label:"외국인 순매도(−)",color:css("--down"),x:TS,y:G(neg),bars:true},
-    {label:"20일 누적 (우)",color:PAL[0],x:TS,y:G(c20),width:1.6,y2:true},
-    {label:"기간 누적 (우)",color:PAL[5],x:TS,y:G(cP),width:2,y2:true}],{unit:"계약",y2unit:"계약",zero:true,height:240,init:[TS[i0],TS[i1]],sync:"kf",ysize:70});
+  tsChart("kfFlow",[{label:"외국인 순매수(+)",color:css("--up"),x:X,y:G(pos),bars:true},{label:"외국인 순매도(−)",color:css("--down"),x:X,y:G(neg),bars:true},
+    {label:"20일 누적 (우)",color:PAL[0],x:X,y:G(c20),width:1.6,y2:true},
+    {label:"기간 누적 (우)",color:PAL[5],x:X,y:G(cP),width:2,y2:true}],{unit:"계약",y2unit:"계약",zero:true,height:240,init:[TS[i0],TS[i1]],sync:"kf",ysize:70});
+  // 미결제약정 잔고(좌) + 일별 증감 막대(우)
+  const dOi=D.oi.map((v,k)=>k&&v!=null&&D.oi[k-1]!=null?v-D.oi[k-1]:null);
+  tsChart("kfOI",[{label:"미결제약정",color:PAL[2],x:X,y:G(D.oi),width:1.8},
+    {label:"일별 증감 (우)",color:"rgba(128,128,128,.55)",x:X,y:G(dOi),bars:true,y2:true}],{unit:"계약",y2unit:"계약",height:200,init:[TS[i0],TS[i1]],sync:"kf",ysize:70});
   // 60일 이동 상관 (일별 가격변화 vs 외국인 순매수)
   const rc=D.p.map((_,k)=>{if(k<61)return null;const x=[],y=[];for(let j=k-59;j<=k;j++){x.push((D.p[j]-D.p[j-1])*100);y.push(D.f[j]);}const r=kfCorr(x,y);return r==null?null:+r.toFixed(3);});
-  tsChart("kfCorr",[{label:"60일 이동 상관 (가격변화 vs 외국인)",color:PAL[5],x:TS,y:G(rc),width:1.6}],{height:200,zero:true,init:[TS[i0],TS[i1]],sync:"kf",ysize:70,padR:74});
+  tsChart("kfCorr",[{label:"60일 이동 상관 (가격변화 vs 외국인)",color:PAL[5],x:X,y:G(rc),width:1.6}],{height:200,zero:true,init:[TS[i0],TS[i1]],sync:"kf",ysize:70,padR:74});
   drawKfRel(D,i0,i1);
 }
 function kfStats(D,k0,k1){
@@ -2512,7 +2523,7 @@ function drawKfRel(D,i0,i1){
 }
 renders.kfut=()=>{
   $$("#kfProd button").forEach(b=>b.classList.toggle("on",b.dataset.p===kf.prod));$("#kfMa").value=kf.ma;
-  const D=kfData();if(!D){$("#kfCards").innerHTML='<p class="hint">국채선물 데이터가 없습니다. 플랫폼 폴더에 국채선물.xlsx 를 두고 업데이트.bat 을 실행하세요.</p>';return;}
+  const D=kfData();if(!D){$("#kfCards").innerHTML='<p class="hint">국채선물 데이터가 없습니다. INFO_DATA.xlsx 에 국채선물 시트를 넣고 업데이트.bat 을 실행하세요.</p>';return;}
   drawKfCards(D);drawKfCharts();
 };
 
