@@ -171,6 +171,11 @@ tr:hover td{background:var(--hover)}
 .usgrid.flstretch{align-items:stretch}
 .flposgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px}
 .flshgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(520px,1fr));gap:12px}
+.cysc2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;margin-top:8px;align-items:start}
+@media (max-width:900px){.cysc2{grid-template-columns:1fr}}
+#cyScTbl td,#cyScTbl th{text-align:right}#cyScTbl td:first-child,#cyScTbl th:first-child{text-align:left}
+#cyTbl tr.sel td{box-shadow:inset 0 0 0 9999px rgba(245,158,11,.16)}
+#cyTbl tr.sel td:first-child{box-shadow:inset 3px 0 0 #f59e0b,inset 0 0 0 9999px rgba(245,158,11,.16)}
 .flshgrid>.panel{min-width:0;margin:0}
 .flposgrid h3{margin:0 0 2px;font-size:13px;font-weight:600}
 .flposgrid .chart{min-height:0}
@@ -212,6 +217,7 @@ tr:hover td{background:var(--hover)}
     <button data-tab="ust">기간프리미엄</button>
     <button data-tab="ts">시계열</button>
     <button data-tab="curve">커브</button>
+    <button data-tab="cycle">사이클</button>
     <button data-tab="table">데이터</button>
   </nav>
   <div class="spacer"></div>
@@ -351,6 +357,51 @@ tr:hover td{background:var(--hover)}
       <div class="chart" id="cvChart" style="margin-top:10px"></div>
     </div>
     <div class="panel"><h2>커브 값</h2><div class="tblwrap" style="max-height:none"><table id="cvTbl"></table></div></div>
+  </section>
+
+  <!-- 금리 사이클 -->
+  <section class="tab" id="tab-cycle">
+    <div class="panel">
+      <div class="row" style="justify-content:space-between;align-items:baseline"><h2 style="margin:0;border:0;padding:0">기준금리 사이클과 단기 커브</h2>
+        <span class="hint"><span style="background:rgba(37,99,235,.18);padding:0 6px">인하기</span> <span style="background:rgba(220,38,38,.16);padding:0 6px">인상기</span> 흰 바탕 = 동결기 · 드래그 확대, 더블클릭 전체</span></div>
+      <div class="row" style="margin-top:8px;gap:10px"><span><label class="lbl">6M~2Y</label><span class="seg" id="cySrc"><button data-s="통안증권">통안</button><button data-s="국고채권">국고</button></span></span><span class="checks" id="cyLines"></span><span><label class="lbl">스프레드(우)</label><select id="cyTimeSp"><option value="3Y-기준">국고 3Y − 기준금리</option><option value="3Y-CD 3M">국고 3Y − CD 3M</option><option value="1Y-기준">1Y − 기준금리</option><option value="CD 3M-기준">CD 3M − 기준금리</option><option value="3Y-1Y">국고 3Y − 1Y</option><option value="none">없음</option></select></span></div>
+      <div class="chart" id="cyTime" style="margin-top:8px"></div>
+      <div class="row" style="margin-top:10px">
+        <span><label class="lbl">국면 시작</label><select id="cyOff"><option value="0">결정일 기준</option><option value="1">1개월 앞당김</option><option value="3">3개월 앞당김</option><option value="6">6개월 앞당김</option></select></span>
+        <span class="hint">앞당기면 시장이 결정을 미리 반영하는 기간까지 그 국면에 넣어 계산합니다.</span>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="row" style="justify-content:space-between;align-items:baseline"><h2 style="margin:0;border:0;padding:0">날짜별 단기 커브</h2><span class="hint" id="cyScInfo"></span></div>
+      <div class="cysc2"><div class="chart" id="cyScCurve"></div>
+        <div class="tblwrap" style="max-height:none"><table id="cyScTbl"></table></div></div>
+      <canvas id="cyScrub" tabindex="0" style="width:100%;height:100px;display:block;margin-top:8px;cursor:ew-resize;touch-action:none;outline:none"></canvas>
+      <div class="row" style="margin-top:8px;gap:8px">
+        <button class="btn" id="cyScPrev">◀ 하루</button><button class="btn" id="cyScNext">하루 ▶</button><button class="btn" id="cyScEnd">최신일</button><button class="btn" id="cyScClr" style="display:none">비교 지우기</button>
+        <button class="btn primary" id="cyScPlay">▶ 재생</button>
+        <span><label class="lbl">재생 속도</label><select id="cyScSpd"><option value="1">1일씩</option><option value="5" selected>1주씩</option><option value="21">1달씩</option></select></span>
+        <label class="checks"><label><input type="checkbox" id="cyScFix" checked> 세로축 고정</label></label>
+        <span class="hint">띠에서 좌클릭(끌기) = 선택일, 우클릭(끌기) = 비교 커브, 한 번 더 우클릭하면 비교 지움. 띠를 누른 뒤 ← → 키로 하루씩. 검은 계단 = 기준금리, 주황 = 국고 3Y.</span>
+      </div>
+    </div>
+    <div class="flshgrid">
+      <div class="panel"><div class="row" style="justify-content:space-between"><h2 style="margin:0;border:0;padding:0">구간별 변화 (bp)</h2>
+        <div class="seg" id="cyKind"><button data-k="cut" class="on">인하기</button><button data-k="hike">인상기</button><button data-k="hold">동결기</button></div></div>
+        <div class="chart" id="cyProf" style="margin-top:8px"></div></div>
+      <div class="panel"><div class="row" style="justify-content:space-between"><h2 style="margin:0;border:0;padding:0" id="cyCurveTitle">선택 국면 커브</h2></div>
+        <div class="chart" id="cyCurve" style="margin-top:8px"></div></div>
+    </div>
+    <div class="panel"><div class="row" style="justify-content:space-between"><h2 style="margin:0;border:0;padding:0">첫 인하·인상 전후 흐름</h2>
+      <div class="row" style="gap:8px"><div class="seg" id="cyEvK"><button data-k="cut" class="on">첫 인하</button><button data-k="hike">첫 인상</button></div>
+      <select id="cyEvM"><option value="3Y-기준">국고 3Y − 기준금리</option><option value="1Y-기준">1Y − 기준금리</option><option value="CD 3M-기준">CD 3M − 기준금리</option><option value="3Y-CD 3M">국고 3Y − CD 3M</option><option value="3Y-1Y">국고 3Y − 1Y</option><option value="CD 3M">CD 3M</option><option value="1Y">1Y</option><option value="3Y">국고 3Y</option></select></div></div>
+      <p class="hint" style="margin:6px 0">가로축 = 첫 결정일로부터 영업일 수 (0 = 결정일). 세로축 = 결정 전날 대비 변화(bp). 점은 그 사이클의 이후 결정일.</p>
+      <div class="chart" id="cyEv"></div></div>
+    <div class="panel"><h2>국면별 단기 커브 변화 (bp)</h2>
+      <p class="hint" style="margin:0 0 6px">각 국면 시작 직전 종가 → 끝 종가. 행을 누르면 위 차트들이 그 국면으로 바뀝니다. 형태: 불=금리 하락, 베어=금리 상승 · 수준=(CD 3M+국고 3Y)/2, 스티프닝=3Y−CD 확대, 플래트닝=축소. 6M~2Y 는 위에서 고른 통안/국고.</p>
+      <div class="tblwrap" style="max-height:none"><table id="cyTbl"></table></div>
+      <p class="hint" id="cySum" style="margin:8px 0 0"></p>
+    </div>
+    <p class="hint">과거 사이클 정리용 분석이며 특정 매매를 권유하지 않습니다.</p>
   </section>
 
   <!-- 미국채 -->
@@ -1422,6 +1473,201 @@ function drawCurve(){
   $("#cvTbl").innerHTML=h+"</tbody>";
 }
 renders.curve=drawCurve;
+
+/* ---------- 금리 사이클 ---------- */
+// 기준금리가 바뀐 날을 모아 같은 방향끼리 한 사이클(인하기/인상기)로 묶고, 사이클 사이를 동결기로 봄
+const CY=(()=>{const b=BYNAME["기준금리"];if(!b)return null;const mv=[];let p=null;
+  for(let i=0;i<=LAST;i++){const v=b.v[i];if(v==null)continue;if(p!=null&&Math.abs(v-p)>1e-9)mv.push({i,d:DATES[i],from:p,to:v,dir:v>p?"hike":"cut"});p=v;}
+  const grp=[];for(const m of mv){const g=grp[grp.length-1];if(g&&g.dir===m.dir)g.mv.push(m);else grp.push({dir:m.dir,mv:[m]});}
+  return {mv,grp};})();
+const CY_NAME={cut:"인하기",hike:"인상기",hold:"동결기"},CY_BG={cut:"rgba(37,99,235,.10)",hike:"rgba(220,38,38,.09)"};
+let cySel=null,cyKind="cut",cyEvK="cut",cySrc=store.get("cy:src","통안증권"),cyLn=store.get("cy:ln",["기준","CD 3M","1Y","2Y","3Y"]);
+// 단기 커브 점: 기준금리 · CD 3M · 6M~2Y(통안/국고 선택) · 국고 2.5Y · 국고 3Y
+function cyPts(){
+  const at=(grp,y)=>(BYGROUP[grp]||[]).find(s=>s.years===y);
+  const src=cySrc==="국고채권"?"국고":"통안";
+  return [["기준",BYNAME["기준금리"],"기준금리"],["CD 3M",BYNAME["CD 3M"],"CD 3M"],
+    ...[0.5,0.75,1,1.5,2].map(y=>[tenorLabel(y),at(cySrc,y),`${src} ${tenorLabel(y)}`]),
+    ["2.5Y",at("국고채권",2.5),"국고 2.5Y"],["3Y",at("국고채권",3),"국고 3Y"]].filter(p=>p[1]).map(([k,s,name])=>({k,s,name}));}
+const cyVal=(pts,k,i)=>{const p=pts.find(p=>p.k===k);return p?valAt(p.s,i):null;};
+function cyPhases(pts){
+  if(!CY)return [];const k=+$("#cyOff").value||0;
+  const sh=d=>{if(!k)return d;const t=new Date(d+"T00:00:00");t.setMonth(t.getMonth()-k);return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,"0")}-${String(t.getDate()).padStart(2,"0")}`;};
+  const before=ds=>{let r=idxOnOrBefore(ds);if(r>=0&&DATES[r]===ds)r--;return Math.max(0,r);};
+  const P=[];CY.grp.forEach((g,j)=>{let n=0;CY.grp.slice(0,j).forEach(x=>{if(x.dir===g.dir)n++;});
+    P.push({kind:g.dir,s:before(sh(g.mv[0].d)),g,n});
+    if(j<CY.grp.length-1)P.push({kind:"hold",s:Math.max(0,idxOnOrBefore(sh(g.mv[g.mv.length-1].d)))});});
+  P.forEach((p,j)=>{p.e=j<P.length-1?P[j+1].s:LAST;p.live=j===P.length-1;});
+  let h=0;P.forEach(p=>{if(p.kind==="hold")p.n=h++;});
+  return P.filter(p=>p.e>p.s).map(p=>{const D={};pts.forEach(q=>{const a=valAt(q.s,p.s),b=valAt(q.s,p.e);D[q.k]=a==null||b==null?null:(b-a)*100;});
+    return Object.assign(p,{D,lab:`${CY_NAME[p.kind]} ${DATES[p.s].slice(2,7).replace("-",".")}~${DATES[p.e].slice(2,7).replace("-",".")}`});});
+}
+// 형태: 수준 = (CD 3M + 3Y)/2 변화, 기울기 = 3Y − CD 3M 변화
+function cyShape(a,b){if(a==null||b==null)return"";const l=(a+b)/2,s=b-a;
+  const dir=Math.abs(l)<5?"":l<0?"불 ":"베어 ";return Math.abs(s)<5?(dir?dir+"평행":"변화 작음"):dir+(s>0?"스티프닝":"플래트닝");}
+function cyColor(p){return PAL[p.n%PAL.length];}
+// x 가 숫자(영업일) 또는 범주(커브 점)인 간단한 선 차트
+function xyChart(id,xs,lines,{cats=null,xfmt=v=>v,xlab="",unit="bp",height=360,vline=null,dots=null,yrange=null}={}){
+  const el=$("#"+id);if(plots[id]){plots[id].destroy();delete plots[id];}el.innerHTML="";
+  if(!window.uPlot||!lines.length){el.innerHTML='<p class="hint" style="padding:40px;text-align:center">표시할 데이터가 없습니다.</p>';return;}
+  if(cats)xfmt=v=>cats[Math.round(v)]??"";
+  const fy=v=>v==null?"-":unit==="bp"?fbp(v):v.toFixed(3);
+  const xa=cats?axis({splits:()=>xs,space:20,values:(u,vs)=>vs.map(xfmt)}):axis({values:(u,vs)=>vs.map(xfmt)});
+  plots[id]=new uPlot({width:el.clientWidth||600,height,scales:{x:{time:false,range:cats?[-0.3,xs.length-0.7]:undefined},...(yrange?{y:{range:()=>yrange}}:{})},padding:[12,cats?16:null,null,null],
+    series:[{label:xlab,value:(u,v)=>v==null?"-":xfmt(v)},...lines.map(l=>({label:l.label,stroke:l.color,width:l.width||1.7,dash:l.dash,spanGaps:true,
+      points:{show:!!l.pts,size:6,fill:l.color},value:(u,v)=>fy(v)}))],
+    axes:[xa,axis({size:58,values:(u,vs)=>vs.map(v=>unit==="bp"?v.toFixed(0):v.toFixed(2))})],
+    cursor:{drag:{x:false,y:false}},
+    hooks:{draw:[u=>{const c=u.ctx,d=devicePixelRatio,L=u.bbox.left,T=u.bbox.top,W=u.bbox.width,H=u.bbox.height;c.save();
+      c.strokeStyle=css("--fg");c.globalAlpha=.4;c.lineWidth=d;c.setLineDash([4*d,4*d]);
+      if(unit==="bp"){const y=u.valToPos(0,"y",true);if(y>=T&&y<=T+H){c.beginPath();c.moveTo(L,y);c.lineTo(L+W,y);c.stroke();}}
+      if(vline!=null){const x=u.valToPos(vline,"x",true);if(x>=L&&x<=L+W){c.beginPath();c.moveTo(x,T);c.lineTo(x,T+H);c.stroke();}}
+      c.restore();
+      if(dots){c.save();for(const o of dots){const x=u.valToPos(o.x,"x",true),y=u.valToPos(o.y,"y",true);if(x<L||x>L+W||y<T||y>T+H)continue;
+        c.fillStyle=o.color;c.strokeStyle=css("--panel");c.lineWidth=1.5*d;c.beginPath();c.arc(x,y,4*d,0,7);c.fill();c.stroke();}c.restore();}}]}},
+    [xs,...lines.map(l=>l.y)],el);
+}
+function drawCycle(){
+  if(!CY){$("#cyTbl").innerHTML='<tr><td class="hint">기준금리 데이터가 없습니다.</td></tr>';return;}
+  $$("#cySrc button").forEach(b=>b.classList.toggle("on",b.dataset.s===cySrc));
+  const pts=cyPts(),P=cyPhases(pts),cats=pts.map(p=>p.k),xs=pts.map((p,k)=>k);
+  // 1) 추이: 고른 점들 + 3Y−기준금리(우)
+  $("#cyLines").innerHTML=pts.map(p=>`<label><input type="checkbox" value="${p.k}" ${cyLn.includes(p.k)?"checked":""}>${p.name}</label>`).join("");
+  const LC={"기준":css("--fg"),"CD 3M":PAL[9],"6M":PAL[5],"9M":PAL[7],"1Y":PAL[1],"1.5Y":PAL[4],"2Y":PAL[2],"2.5Y":PAL[3],"3Y":PAL[0]};
+  const ls=pts.filter(p=>cyLn.includes(p.k)).map(p=>({label:p.name,color:LC[p.k]||PAL[8],x:TS,y:p.s.v,step:p.k==="기준",width:p.k==="기준"?2.4:1.4}));
+  const sp=$("#cyTimeSp").value;
+  const A=pts.find(p=>p.k===sp.split("-")[0]),B=pts.find(p=>p.k===sp.split("-")[1]);
+  if(A&&B)ls.push({label:`${A.name} − ${B.name} (bp, 우)`,color:PAL[6],width:1.1,y2:true,x:TS,y:A.s.v.map((v,i)=>{const b=valAt(B.s,i);return v==null||b==null?null:+((v-b)*100).toFixed(2);})});
+  tsChart("cyTime",ls,{height:400,regions:P.filter(p=>p.kind!=="hold").map(p=>[TS[p.s],TS[p.e],CY_BG[p.kind]])});
+  cyScBuild(pts,P);
+  // 2) 표: 점별 변화 + 기울기(3Y−CD), 3Y−기준
+  if(cySel==null||!P[cySel]){let j=-1;P.forEach((p,k)=>{if(p.kind==="cut"&&!p.live)j=k;});cySel=j>=0?j:P.length-1;}
+  const dd=(p,a,b)=>p.D[a]==null||p.D[b]==null?null:p.D[a]-p.D[b];
+  const cols=[...pts.filter(q=>q.k!=="기준").map(q=>[q.k,p=>p.D[q.k]]),["3Y−CD",p=>dd(p,"3Y","CD 3M")],["3Y−기준",p=>dd(p,"3Y","기준")]];
+  const mx=Math.max(1,...P.flatMap(p=>cols.map(([,f])=>Math.abs(f(p)||0))));
+  const f2=v=>v==null?"-":v.toFixed(2);
+  const row=(p,k)=>{const r0=valAt(BYNAME["기준금리"],p.s),r1=valAt(BYNAME["기준금리"],p.e);
+    return `<tr data-i="${k}" class="${k===cySel?"sel":""}" style="cursor:pointer"><td><span style="display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px;background:${p.kind==="hold"?css("--muted"):cyColor(p)}"></span>${CY_NAME[p.kind]}${p.live?" (진행 중)":""}</td>
+      <td>${DATES[p.s]} ~ ${DATES[p.e]}</td><td>${p.e-p.s}</td><td>${f2(r0)}→${f2(r1)} <span class="${cls(p.D["기준"])}">(${fbp(p.D["기준"])})</span></td>
+      ${cols.map(([,f])=>{const v=f(p);return `<td class="heat" style="${heat(v,mx,true)}">${fbp(v)}</td>`;}).join("")}<td>${cyShape(p.D["CD 3M"],p.D["3Y"])}</td></tr>`;};
+  const avg=kind=>{const q=P.filter(p=>p.kind===kind&&!p.live);if(!q.length)return null;const m=f=>{const v=q.map(f).filter(x=>x!=null);return v.length?v.reduce((a,b)=>a+b,0)/v.length:null;};
+    return {kind,n:q.length,days:Math.round(m(p=>p.e-p.s)),dr:m(p=>p.D["기준"]),vals:cols.map(([,f])=>m(f)),cd:m(p=>p.D["CD 3M"]),y3:m(p=>p.D["3Y"]),sl:m(p=>dd(p,"3Y","CD 3M"))};};
+  const AV=["cut","hike","hold"].map(avg).filter(Boolean);
+  let h=`<thead><tr><th>국면</th><th>기간</th><th>영업일</th><th>기준금리</th>${cols.map(([n])=>`<th>${n}</th>`).join("")}<th>형태</th></tr></thead><tbody>`;
+  h+=P.map(row).join("");
+  h+=AV.map((a,r)=>`<tr${r?"":' class="fsep"'}><td><b>${CY_NAME[a.kind]} 평균</b> <span class="hint">(${a.n}회)</span></td><td class="hint">진행 중 국면 제외</td><td>${a.days}</td><td class="${cls(a.dr)}">${fbp(a.dr)}</td>
+    ${a.vals.map(v=>`<td class="heat" style="${heat(v,mx,true)}"><b>${fbp(v)}</b></td>`).join("")}<td><b>${cyShape(a.cd,a.y3)}</b></td></tr>`).join("");
+  $("#cyTbl").innerHTML=h+"</tbody>";
+  $("#cySum").textContent=AV.map(a=>`${CY_NAME[a.kind]} 평균: 기준금리 ${fbp(a.dr)}bp, CD 3M ${fbp(a.cd)}bp, 국고 3Y ${fbp(a.y3)}bp, 3Y−CD ${fbp(a.sl)}bp → ${cyShape(a.cd,a.y3)}`).join(" · ");
+  $$("#cyTbl tr[data-i]").forEach(tr=>tr.onclick=()=>{cySel=+tr.dataset.i;cyStop();cyDi=P[cySel].e;const k=P[cySel].kind;if(k!==cyKind){cyKind=k;$$("#cyKind button").forEach(b=>b.classList.toggle("on",b.dataset.k===cyKind));}drawCycle();});
+  // 3) 점별 변화: 같은 종류 국면들 + 평균
+  const q=P.filter(p=>p.kind===cyKind);
+  const pl=q.map(p=>({label:p.lab+(p.live?" (진행 중)":""),color:cyColor(p),pts:true,width:P.indexOf(p)===cySel?2.8:1.5,dash:p.live?[5,4]:undefined,
+    y:pts.map(t=>p.D[t.k]==null?null:+p.D[t.k].toFixed(1))}));
+  const done=pl.filter((l,k)=>!q[k].live);
+  if(done.length>1)pl.push({label:"평균 (진행 중 제외)",color:css("--fg"),width:3,dash:[8,5],y:xs.map(k=>{const v=done.map(l=>l.y[k]).filter(x=>x!=null);return v.length?+(v.reduce((a,b)=>a+b,0)/v.length).toFixed(1):null;})});
+  xyChart("cyProf",xs,pl,{cats,xlab:"구간",height:380});
+  // 4) 선택 국면의 시작·끝 커브
+  const p=P[cySel];
+  $("#cyCurveTitle").textContent=`${p.lab} 단기 커브`;
+  const cv=(i,c,w)=>({label:DATES[i]+(i===p.s?" (시작)":" (끝)"),color:c,pts:true,width:w,y:pts.map(t=>valAt(t.s,i))});
+  xyChart("cyCurve",xs,[cv(p.s,css("--muted"),1.6),cv(p.e,cyColor(p),2.4)],{cats,xlab:"구간",unit:"%",height:380});
+  // 5) 첫 결정 전후 (영업일 −120 ~ +260)
+  const [ma,mb]=$("#cyEvM").value.split("-");
+  const M=i=>{const a=cyVal(pts,ma,i);if(a==null)return null;if(!mb)return a*100;const b=cyVal(pts,mb,i);return b==null?null:(a-b)*100;};
+  const ev=[];for(let o=-120;o<=260;o++)ev.push(o);
+  const cyc=P.filter(p=>p.kind===cyEvK);const dots=[];
+  const el=cyc.map(p=>{const i0=p.g.mv[0].i,b=M(i0-1);
+    const y=ev.map(o=>{const i=i0+o;if(i<0||i>LAST||b==null)return null;const v=M(i);return v==null?null:+(v-b).toFixed(1);});
+    p.g.mv.slice(1).forEach(m=>{const o=m.i-i0;if(o<=260&&y[o+120]!=null)dots.push({x:o,y:y[o+120],color:cyColor(p)});});
+    return {label:`${p.g.mv[0].d} 첫 ${cyEvK==="cut"?"인하":"인상"}`,color:cyColor(p),width:1.7,y};});
+  if(el.length>1)el.push({label:"평균",color:css("--fg"),width:3,dash:[8,5],y:ev.map((o,k)=>{const v=el.map(l=>l.y[k]).filter(x=>x!=null);return v.length>1?+(v.reduce((a,b)=>a+b,0)/v.length).toFixed(1):null;})});
+  xyChart("cyEv",ev,el,{xlab:"영업일",xfmt:v=>(v>0?"+":"")+v,height:400,vline:0,dots});
+}
+// ---- 날짜별 단기 커브: 아래 띠를 누르고 끌면 날짜가 바뀌며 커브·표가 따라 바뀜 ----
+let cyDi=LAST,cyCmp=null,cyPlayT=null,cySc=null;
+function cyScBuild(pts,P){
+  const xs=pts.map((p,k)=>k),cats=pts.map(p=>p.k);
+  // 세로축 고정: 전체 기간 최저~최고 (끌 때 축이 흔들리지 않게)
+  let lo=Infinity,hi=-Infinity;pts.forEach(p=>p.s.v.forEach(v=>{if(v!=null){if(v<lo)lo=v;if(v>hi)hi=v;}}));
+  const fix=$("#cyScFix").checked;
+  cySc={pts,P,xs,cats,yr:[Math.floor(lo*4)/4-0.1,Math.ceil(hi*4)/4+0.1]};
+  xyChart("cyScCurve",xs,[{label:"선택일",color:PAL[0],pts:true,width:2.6,y:xs.map(()=>null)},{label:"비교일",color:PAL[1],pts:true,width:1.8,dash:[6,4],y:xs.map(()=>null)}],{cats,xlab:"구간",unit:"%",height:360,yrange:fix?cySc.yr:null});
+  cyScSet(cyDi);
+}
+function cyScPhase(i){return cySc.P.find(p=>i>p.s&&i<=p.e)||null;}
+// 좌클릭 = 선택일, 우클릭 = 비교일
+function cyScSet(i,cmp){
+  if(!cySc)return;const j=Math.max(0,Math.min(LAST,i));if(cmp)cyCmp=j;else if(i!=null)cyDi=j;
+  const {pts,xs}=cySc,ph=i=>{const p=cyScPhase(i);return p?`${CY_NAME[p.kind]}${p.live?" (진행 중)":""}`:"";};
+  const cur=pts.map(t=>valAt(t.s,cyDi)),ref=cyCmp!=null?pts.map(t=>valAt(t.s,cyCmp)):xs.map(()=>null);
+  const u=plots.cyScCurve;if(u){u.setData([xs,cur,ref]);u.setSeries(2,{show:cyCmp!=null});}
+  $("#cyScInfo").innerHTML=`<b style="color:${PAL[0]}">선택 ${DATES[cyDi]}</b> ${ph(cyDi)}`+(cyCmp!=null?` · <b style="color:${PAL[1]}">비교 ${DATES[cyCmp]}</b> ${ph(cyCmp)}`:" · 우클릭으로 비교일 지정");
+  $("#cyScClr").style.display=cyCmp!=null?"":"none";
+  // 표: 선택일, 비교일, 차이, 기준금리 대비
+  const b=cur[0],rb=ref[0];
+  const R=[["선택일 (%)",cur.map(v=>v==null?"-":v.toFixed(3)),null],
+    ...(cyCmp!=null?[["비교일 (%)",ref.map(v=>v==null?"-":v.toFixed(3)),null],
+      ["선택 − 비교 (bp)",null,cur.map((v,k)=>v==null||ref[k]==null?null:(v-ref[k])*100)]]:[]),
+    ["선택일 − 기준금리 (bp)",null,cur.map((v,k)=>k===0||v==null||b==null?null:(v-b)*100)],
+    ...(cyCmp!=null?[["비교일 − 기준금리 (bp)",null,ref.map((v,k)=>k===0||v==null||rb==null?null:(v-rb)*100)]]:[])];
+  const mx=Math.max(10,...R.flatMap(r=>(r[2]||[]).map(v=>Math.abs(v||0))));
+  // 행 = 커브 점, 열 = 선택일·비교일·차이·기준금리 대비 (차트 옆 반쪽 폭에 맞게 세로로)
+  const hd=n=>n.replace(" (%)","<br><span class=\"hint\">%</span>").replace(" (bp)","<br><span class=\"hint\">bp</span>");
+  $("#cyScTbl").innerHTML=`<thead><tr><th>구간</th>${R.map(([n])=>`<th>${hd(n)}</th>`).join("")}</tr></thead><tbody>`+
+    pts.map((t,k)=>`<tr><td${k?"":' style="font-weight:700"'}>${t.name}</td>${R.map(([,txt,num])=>txt?`<td>${txt[k]}</td>`:`<td class="heat" style="${heat(num[k],mx,true)}">${num[k]==null?"-":fbp(num[k])}</td>`).join("")}</tr>`).join("")+"</tbody>";
+  cyScStrip();
+}
+// 날짜 띠: 국면 음영 + 기준금리(계단)·국고 3Y + 선택 표시
+function cyScStrip(){
+  const cv=$("#cyScrub");if(!cv||!cySc)return;const d=devicePixelRatio,W=cv.clientWidth||800,H=100;
+  cv.width=W*d;cv.height=H*d;const c=cv.getContext("2d");c.scale(d,d);
+  const L=10,R=W-10,T=22,B=H-18,x=i=>L+(R-L)*i/LAST;
+  for(const p of cySc.P)if(p.kind!=="hold"){c.fillStyle=p.kind==="cut"?"rgba(37,99,235,.16)":"rgba(220,38,38,.14)";c.fillRect(x(p.s),T,x(p.e)-x(p.s),B-T);}
+  const base=BYNAME["기준금리"],k3=BYNAME["국고채권 3Y"];
+  let lo=Infinity,hi=-Infinity;[base,k3].forEach(s=>s&&s.v.forEach(v=>{if(v!=null){lo=Math.min(lo,v);hi=Math.max(hi,v);}}));
+  const y=v=>B-(B-T)*(v-lo)/((hi-lo)||1);
+  const line=(s,col,w,step)=>{if(!s)return;c.strokeStyle=col;c.lineWidth=w;c.beginPath();let on=false,py=null;
+    for(let i=0;i<=LAST;i++){const v=s.v[i];if(v==null)continue;const X=x(i),Y=y(v);if(!on){c.moveTo(X,Y);on=true;}else{if(step&&py!=null)c.lineTo(X,py);c.lineTo(X,Y);}py=Y;}c.stroke();};
+  line(k3,PAL[0],1,false);line(base,css("--fg"),1.6,true);
+  // 연도 눈금
+  c.fillStyle=css("--muted");c.strokeStyle=css("--line");c.lineWidth=1;c.font="11px Consolas,monospace";c.textAlign="center";c.textBaseline="top";
+  let py="";for(let i=0;i<=LAST;i++){const yy=DATES[i].slice(0,4);if(yy!==py){py=yy;const X=x(i);c.beginPath();c.moveTo(X,B);c.lineTo(X,B+4);c.stroke();if(X>L+12&&X<R-12)c.fillText("'"+yy.slice(2),X,B+5);}}
+  // 선택 표시
+  if(cyCmp!=null){const X=x(cyCmp);c.strokeStyle=PAL[1];c.lineWidth=2;c.setLineDash([4,3]);c.beginPath();c.moveTo(X,T-4);c.lineTo(X,B);c.stroke();c.setLineDash([]);
+    c.font="bold 12px Consolas,monospace";const t=DATES[cyCmp],tw=c.measureText(t).width+10,bx=Math.max(L,Math.min(R-tw,X-tw/2));
+    c.fillStyle=PAL[1];c.fillRect(bx,2,tw,17);c.fillStyle="#fff";c.textBaseline="middle";c.textAlign="left";c.fillText(t,bx+5,11);c.textBaseline="top";c.textAlign="center";}
+  const X=x(cyDi);c.strokeStyle="#f59e0b";c.lineWidth=2;c.beginPath();c.moveTo(X,T-4);c.lineTo(X,B);c.stroke();
+  c.font="bold 12px Consolas,monospace";const t=DATES[cyDi],tw=c.measureText(t).width+10,bx=Math.max(L,Math.min(R-tw,X-tw/2));
+  c.fillStyle="#f59e0b";c.fillRect(bx,2,tw,17);c.fillStyle="#111";c.textBaseline="middle";c.textAlign="left";c.fillText(t,bx+5,11);
+}
+(()=>{const cv=$("#cyScrub");
+  const pick=(e,cmp)=>{const r=cv.getBoundingClientRect(),L=10,R=r.width-10;cyScSet(Math.round((e.clientX-r.left-L)/(R-L)*LAST),cmp);};
+  cv.oncontextmenu=e=>e.preventDefault();
+  // 우클릭: 비교일이 없으면 지정(끌면 이동), 이미 있으면 지움
+  let rDrag=false;
+  cv.onpointerdown=e=>{if(e.button!==0&&e.button!==2)return;e.preventDefault();rDrag=false;
+    if(e.button===2&&cyCmp!=null){cyCmp=null;cyScSet(null);return;}
+    if(e.button===0)cyStop();else rDrag=true;cv.setPointerCapture(e.pointerId);pick(e,e.button===2);};
+  cv.onpointermove=e=>{if(e.buttons&1)pick(e,false);else if(e.buttons&2&&rDrag)pick(e,true);};
+  cv.onkeydown=e=>{const k={ArrowLeft:-1,ArrowRight:1,PageUp:-21,PageDown:21}[e.key];if(k){e.preventDefault();cyStop();cyScSet(cyDi+k);}};
+})();
+function cyStop(){if(cyPlayT){clearInterval(cyPlayT);cyPlayT=null;$("#cyScPlay").textContent="▶ 재생";}}
+$("#cyScPrev").onclick=()=>{cyStop();cyScSet(cyDi-1);};
+$("#cyScNext").onclick=()=>{cyStop();cyScSet(cyDi+1);};
+$("#cyScEnd").onclick=()=>{cyStop();cyScSet(LAST);};
+$("#cyScClr").onclick=()=>{cyCmp=null;cyScSet(null);};
+$("#cyScPlay").onclick=()=>{if(cyPlayT){cyStop();return;}if(cyDi>=LAST)cyDi=0;$("#cyScPlay").textContent="❚❚ 정지";
+  cyPlayT=setInterval(()=>{if(curTab!=="cycle"||cyDi>=LAST){cyStop();return;}cyScSet(cyDi+(+$("#cyScSpd").value||5));},60);};
+$("#cyScFix").onchange=()=>drawCycle();
+$("#cyOff").onchange=()=>drawCycle();   // 국면 순서는 그대로라 선택 행 유지
+$("#cyTimeSp").onchange=()=>drawCycle();
+$("#cySrc").onclick=e=>{const b=e.target.closest("button");if(!b)return;cySrc=b.dataset.s;store.set("cy:src",cySrc);drawCycle();};
+$("#cyLines").onchange=()=>{cyLn=$$("#cyLines input:checked").map(x=>x.value);store.set("cy:ln",cyLn);drawCycle();};
+$("#cyKind").onclick=e=>{const b=e.target.closest("button");if(!b)return;cyKind=b.dataset.k;$$("#cyKind button").forEach(x=>x.classList.toggle("on",x===b));drawCycle();};
+$("#cyEvK").onclick=e=>{const b=e.target.closest("button");if(!b)return;cyEvK=b.dataset.k;$$("#cyEvK button").forEach(x=>x.classList.toggle("on",x===b));drawCycle();};
+$("#cyEvM").onchange=()=>drawCycle();
+renders.cycle=drawCycle;
 
 /* ---------- 매트릭스 ---------- */
 let mxMode="sprchg";
