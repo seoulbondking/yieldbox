@@ -359,6 +359,15 @@ tr:hover td{background:var(--hover)}
       <div class="cmpgrid" id="gdCmpCards" style="display:none"></div>
     </div>
     <div id="spBs" style="display:none">
+      <div class="panel" id="bsDetPanel">
+        <div class="row">
+          <span><label class="lbl">본드스왑</label><select id="bsdSel"></select></span>
+          <span class="hint">아래 표의 행이나 만기별 시계열의 '상세'를 눌러도 바뀝니다.</span>
+        </div>
+        <div class="row" style="margin-top:10px"><div id="bsdRange"></div></div>
+        <div class="stat" id="bsdStat"></div>
+        <div class="chart" id="bsdChart" style="margin-top:10px"></div>
+      </div>
       <div class="panel">
         <div class="row" style="justify-content:space-between"><h2>본드스왑 스프레드 요약 (IRS − 국고·통안, bp)</h2><span class="hint" id="bsAsOf"></span></div>
         <div class="tblwrap" style="max-height:none"><table id="bsTbl"></table></div>
@@ -366,20 +375,20 @@ tr:hover td{background:var(--hover)}
       </div>
       <div class="panel">
         <div class="row" style="justify-content:space-between">
+          <h2>만기별 시계열</h2>
+          <div class="row"><span><label class="lbl">통계 기간</label></span><div id="bsRange"></div></div>
+        </div>
+        <div class="chips" id="bsChips"></div>
+        <p class="hint" style="margin:6px 0 0">배경 띠 = 통계 기간 평균 ±1σ·±2σ. 차트는 최근 5개월부터 보이며 드래그하면 함께 확대·축소됩니다. IRS 18M = 1.5Y. IRS 2.5Y* 는 원자료가 없어 2Y·3Y 평균으로 보간한 값입니다.</p>
+      </div>
+      <div class="smgrid" id="bsCards"></div>
+      <div class="panel">
+        <div class="row" style="justify-content:space-between">
           <h2>만기별 스왑 스프레드 커브</h2>
           <div class="row"><span class="checks" id="bsCmp"></span><label class="checks"><label><input type="checkbox" id="bsMsb" checked> 통안(단기) 같이 보기</label></label></div>
         </div>
         <div class="chart" id="bsCurve" style="min-height:320px"></div>
       </div>
-      <div class="panel">
-        <div class="row" style="justify-content:space-between">
-          <h2>만기별 시계열</h2>
-          <div class="row"><span><label class="lbl">통계 기간</label></span><div id="bsRange"></div></div>
-        </div>
-        <div class="chips" id="bsChips"></div>
-        <p class="hint" style="margin:6px 0 0">배경 띠 = 통계 기간 평균 ±1σ·±2σ. 차트는 최근 5개월부터 보이며 드래그하면 함께 확대·축소됩니다.</p>
-      </div>
-      <div class="smgrid" id="bsCards"></div>
     </div>
   </section>
 
@@ -1477,7 +1486,9 @@ function drawGrid(){
   });
 }
 // ---------- 스프레드 › 본드스왑 (IRS − 국고, 단기는 IRS − 통안)
-const IRS_BY=y=>(BYGROUP["IRS"]||[]).find(s=>s.years===y);
+const IRS_BY=y=>{const L=BYGROUP["IRS"]||[],s=L.find(s=>s.years===y);if(s||y!==2.5)return s;
+  const a=L.find(s=>s.years===2),b=L.find(s=>s.years===3);if(!a||!b)return null;   // IRS 2.5Y 없음 -> 2Y·3Y 평균
+  return {name:"IRS 2.5Y(보간)",tenor:"2.5Y*",years:2.5,v:a.v.map((x,i)=>x==null||b.v[i]==null?null:(x+b.v[i])/2)};};
 const bsSeries=(irs,bond)=>irs.v.map((a,i)=>{const b=bond.v[i];return a==null||b==null?null:+((a-b)*100).toFixed(2);});
 const bsLast=arr=>{for(let i=arr.length-1;i>=0;i--)if(arr[i]!=null)return [arr[i],i];return [null,-1];};
 const bsPct=(arr,v)=>{const t0=idxOnOrAfter("2013-01-01");let n=0,le=0;for(let i=t0;i<arr.length;i++){const x=arr[i];if(x==null)continue;n++;if(x<=v)le++;}return n?le/n*100:0;};
@@ -1485,12 +1496,19 @@ const BS_ALL=[];
 for(const [g,lab] of [["국고채권","국고"],["통안증권","통안"]])
   for(const s of (BYGROUP[g]||[])){const I=IRS_BY(s.years);if(I&&s.years>=0.5)BS_ALL.push({key:`${lab} ${s.tenor}`,grp:lab,years:s.years,tenor:s.tenor,irs:I,bond:s,y:bsSeries(I,s)});}
 const BS_MAIN=["국고 1Y","국고 2Y","국고 3Y","국고 5Y","국고 7Y","국고 10Y","국고 30Y"],BS_SHORT=["통안 6M","통안 1Y","통안 2Y"];
+// 만기별 시계열에서 고를 수 있는 목록 (표보다 촘촘하게)
+const BS_CHIPS=["국고 1Y","국고 1.5Y","국고 2Y","국고 2.5Y","국고 3Y","국고 4Y","국고 5Y","국고 7Y","국고 10Y","국고 30Y","통안 6M","통안 1Y","통안 1.5Y","통안 2Y","통안 2.5Y","통안 3Y"];
 let bs=store.get("bs",{cmp:["1M","1Y"],sel:["국고 1Y","국고 2Y","국고 3Y","국고 5Y","국고 10Y","국고 30Y"],msb:true});
 $("#bsCmp").innerHTML=["WTD","1M","3M","1Y"].map(p=>`<label><input type="checkbox" value="${p}" ${bs.cmp.includes(p)?"checked":""}>${pLab(p)}</label>`).join("");
 $("#bsCmp").onchange=()=>{bs.cmp=$$("#bsCmp input:checked").map(x=>x.value);store.set("bs",bs);drawBsCurve();};
 $("#bsMsb").checked=bs.msb!==false;$("#bsMsb").onchange=()=>{bs.msb=$("#bsMsb").checked;store.set("bs",bs);drawBsCurve();};
 $("#bsChips").onclick=e=>{const c=e.target.closest(".chip");if(!c)return;const k=c.dataset.k;bs.sel=bs.sel.includes(k)?bs.sel.filter(x=>x!==k):bs.sel.concat(k);store.set("bs",bs);drawBsGrid();};
-$("#bsCards").onclick=e=>{const b=e.target.closest("button[data-a]");if(!b)return;setPick("A",b.dataset.a);setPick("B",b.dataset.b);spSub="detail";store.set("spSub",spSub);renders.spread();window.scrollTo({top:0,behavior:"smooth"});};
+// 상세 / 표 행 클릭 -> 맨 위 본드스왑 상세 차트로
+const bsShow=k=>{if(!bsGet(k))return;bs.det=k;store.set("bs",bs);drawBsDetail();$("#bsDetPanel").scrollIntoView({behavior:"smooth",block:"start"});};
+$("#bsCards").onclick=e=>{const b=e.target.closest("button[data-k]");if(b)bsShow(b.dataset.k);};
+$("#bsTbl").onclick=e=>{const r=e.target.closest("tr[data-k]");if(r)bsShow(r.dataset.k);};
+$("#bsdSel").onchange=()=>{bs.det=$("#bsdSel").value;store.set("bs",bs);drawBsDetail();};
+const bsdRangeGet=rangeBar($("#bsdRange"),"bsdStat","3Y",()=>drawBsDetail());
 const bsRangeGet=rangeBar($("#bsRange"),"bsStat","전체",()=>drawBsGrid());
 const bsGet=k=>BS_ALL.find(p=>p.key===k);
 function drawBsTable(){
@@ -1500,7 +1518,7 @@ function drawBsTable(){
   const sec=(title,keys)=>{let first=true;for(const k of keys){const p=bsGet(k);if(!p)continue;const [cur,ci]=bsLast(p.y);if(cur==null)continue;
     const ch=P.map(q=>{const j=shiftIdx(ci,q),v=j>=0?valAt({v:p.y},j):null;return v==null?null:cur-v;});
     let hi=-1e9,lo=1e9;for(let t=Math.max(0,shiftIdx(ci,"1Y"));t<=ci;t++){const v=p.y[t];if(v==null)continue;if(v>hi)hi=v;if(v<lo)lo=v;}
-    h+=`<tr class="${first?"sep":""}"><td>${first?`<span class="hint">${title}</span><br>`:""}IRS ${p.irs.tenor} − ${p.grp} ${p.tenor}</td><td><b>${cur.toFixed(1)}</b></td>${ch.map(v=>`<td class="${cls(v)}">${fbp(v)}</td>`).join("")}<td>${hi.toFixed(1)}</td><td>${lo.toFixed(1)}</td><td>${bsPct(p.y,cur).toFixed(0)}%</td></tr>`;first=false;}};
+    h+=`<tr class="${first?"sep":""}" data-k="${k}" style="cursor:pointer"><td>${first?`<span class="hint">${title}</span><br>`:""}IRS ${p.irs.tenor} − ${p.grp} ${p.tenor}</td><td><b>${cur.toFixed(1)}</b></td>${ch.map(v=>`<td class="${cls(v)}">${fbp(v)}</td>`).join("")}<td>${hi.toFixed(1)}</td><td>${lo.toFixed(1)}</td><td>${bsPct(p.y,cur).toFixed(0)}%</td></tr>`;first=false;}};
   sec("본드스왑 (IRS − 국고)",BS_MAIN);sec("단기 스왑 (IRS − 통안)",BS_SHORT);
   $("#bsTbl").innerHTML=h+"</tbody>";
 }
@@ -1526,13 +1544,29 @@ function drawBsCurve(){
       for(const t of tags){const w=c.measureText(t.l.tag).width;c.globalAlpha=.85;c.fillStyle=css("--panel");c.fillRect(t.x+5*d,t.y-7*d,w+6*d,14*d);c.globalAlpha=1;c.fillStyle=t.l.color;c.fillText(t.l.tag,t.x+8*d,t.y);}
       c.restore();}]}},[xs,...lines.map(l=>l.y)],el);
 }
+// 맨 위 상세 차트: 크레딧 상세와 같은 통계 줄 + 평균 ±1σ·±2σ 띠 (통계 제외 기간 없음)
+function drawBsDetail(){
+  const keys=[...BS_MAIN,...BS_SHORT,...BS_ALL.map(p=>p.key)].filter((k,i,a)=>a.indexOf(k)===i&&bsGet(k));
+  if(!bsGet(bs.det))bs.det="국고 3Y";
+  $("#bsdSel").innerHTML=keys.map(k=>{const p=bsGet(k);return `<option value="${k}" ${k===bs.det?"selected":""}>IRS ${p.irs.tenor} − ${p.grp} ${p.tenor}</option>`;}).join("");
+  $$("#bsTbl tr[data-k]").forEach(r=>r.style.background=r.dataset.k===bs.det?"var(--hover)":"");
+  const p=bsGet(bs.det),y=p.y,[i0,i1]=bsdRangeGet(),x=TS;
+  const vals=[];for(let i=i0;i<=i1;i++)if(y[i]!=null)vals.push(y[i]);
+  const cur=vals[vals.length-1],n=vals.length,mean=vals.reduce((a,b)=>a+b,0)/(n||1),sd=Math.sqrt(vals.reduce((a,b)=>a+(b-mean)**2,0)/((n-1)||1));
+  const sorted=[...vals].sort((a,b)=>a-b),pct=n?sorted.filter(v=>v<=cur).length/n*100:null;
+  const st=[["현재",fbp(cur)+"bp"],["평균",fbp(mean)+"bp"],["최고",fbp(sorted[n-1])+"bp"],["최저",fbp(sorted[0])+"bp"],["표준편차",sd.toFixed(1)+"bp"],
+    ["Z-score",n>1?((cur-mean)/sd).toFixed(2):"-"],["백분위",pct==null?"-":pct.toFixed(0)+"%"],["구간 변동",n?fbp(cur-vals[0])+"bp":"-"]];
+  $("#bsdStat").innerHTML=st.map(([k,v])=>`<div><span>${k}</span><b>${v}</b></div>`).join("");
+  tsChart("bsdChart",[{label:`IRS ${p.irs.tenor} − ${p.grp} ${p.tenor}`,color:PAL[1],x,y},{label:"구간 평균",color:css("--fg"),dash:[6,4],x,y:y.map((v,i)=>i>=i0&&i<=i1?+mean.toFixed(2):null),width:1.2}],
+    {unit:"bp",zero:true,init:[TS[i0],TS[i1]],bands:n>1?{mean,sd}:null});
+}
 let bsCount=0;
 function drawBsGrid(){
-  $("#bsChips").innerHTML=[...BS_MAIN,...BS_SHORT].filter(k=>bsGet(k)).map(k=>`<span class="chip ${bs.sel.includes(k)?"on":""}" data-k="${k}">${k}</span>`).join("");
-  const [i0,i1]=bsRangeGet(),on=[...BS_MAIN,...BS_SHORT].filter(k=>bs.sel.includes(k)&&bsGet(k)).map(bsGet);
+  $("#bsChips").innerHTML=BS_CHIPS.filter(k=>bsGet(k)).map(k=>`<span class="chip ${bs.sel.includes(k)?"on":""}" data-k="${k}">${k}</span>`).join("");
+  const [i0,i1]=bsRangeGet(),on=BS_CHIPS.filter(k=>bs.sel.includes(k)&&bsGet(k)).map(bsGet);
   for(let k=on.length;k<bsCount;k++)if(plots["bs"+k]){plots["bs"+k].destroy();delete plots["bs"+k];}bsCount=on.length;
   $("#bsCards").innerHTML=on.map((p,k)=>`<div class="smcard"><div class="hd"><span class="tt">IRS ${p.irs.tenor} − ${p.grp} ${p.tenor}</span>
-    <button class="btn" data-a="${p.irs.name}" data-b="${p.bond.name}" style="padding:1px 8px;font-size:11px">상세 ↗</button></div><div class="mt" id="bsm${k}"></div><div class="hv" id="bsh${k}">&nbsp;</div><div id="bs${k}"></div></div>`).join("")||'<p class="hint">위에서 만기를 고르세요.</p>';
+    <button class="btn" data-k="${p.key}" style="padding:1px 8px;font-size:11px">상세 ↑</button></div><div class="mt" id="bsm${k}"></div><div class="hv" id="bsh${k}">&nbsp;</div><div id="bs${k}"></div></div>`).join("")||'<p class="hint">위에서 만기를 고르세요.</p>';
   on.forEach((p,k)=>{const y=p.y,vals=[];for(let i=i0;i<=i1;i++)if(y[i]!=null)vals.push(y[i]);
     const n=vals.length,mean=vals.reduce((a,b)=>a+b,0)/(n||1),sd=Math.sqrt(vals.reduce((a,b)=>a+(b-mean)**2,0)/((n-1)||1));
     let ci=-1;for(let i=i1;i>=i0;i--)if(y[i]!=null){ci=i;break;}
@@ -1546,7 +1580,7 @@ renders.spread=()=>{
   if(!["detail","grid","bs"].includes(spSub))spSub="detail";
   $$("#spSub button").forEach(b=>b.classList.toggle("on",b.dataset.v===spSub));
   $("#spDetail").style.display=spSub==="detail"?"":"none";$("#spGrid").style.display=spSub==="grid"?"":"none";$("#spBs").style.display=spSub==="bs"?"":"none";
-  if(spSub==="grid")drawGrid();else if(spSub==="bs"){drawBsTable();drawBsCurve();drawBsGrid();}else{drawSpread();drawCredit();}
+  if(spSub==="grid")drawGrid();else if(spSub==="bs"){drawBsTable();drawBsDetail();drawBsCurve();drawBsGrid();}else{drawSpread();drawCredit();}
 };
 
 
