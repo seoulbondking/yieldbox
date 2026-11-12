@@ -1481,7 +1481,9 @@ function drawGrid(){
     const hv=$("#gdh"+k),hoverAt=(u,i)=>{if(i==null||i<0){hv.innerHTML="&nbsp;";return;}
       let j=i;while(j>0&&y[j]==null&&i-j<10)j--;const v=y[j];
       hv.innerHTML=v==null?`${DATES[i]} · -`:`<span class="d">${DATES[j]}</span> <b>${v.toFixed(1)}bp</b>${cur!=null?` <span class="${cls(cur-v)}">→ 현재 ${fbp(cur-v)}</span>`:""}`;};
-    tsChart("gd"+k,[{label:it.label,color:PAL[1],x:TS,y}],{unit:"bp",height:200,onCursor:hoverAt,init:[TS[Math.max(i0,shiftIdx(i1,"5M"))],TS[i1]],sync:"gd",
+    // 구간 평균선 (크레딧 상세처럼 검은 점선, 통계 기간·제외 기간 반영)
+    const avg=n?y.map((v,i)=>i>=i0&&i<=i1?+mean.toFixed(2):null):null;
+    tsChart("gd"+k,[{label:it.label,color:PAL[1],x:TS,y},...(avg?[{label:"평균",color:css("--fg"),dash:[6,4],x:TS,y:avg,width:1.2}]:[])],{unit:"bp",height:200,onCursor:hoverAt,init:[TS[Math.max(i0,shiftIdx(i1,"5M"))],TS[i1]],sync:"gd",
       shade:exOn?[Date.parse(exA+"T00:00:00")/1000,Date.parse(exB+"T00:00:00")/1000]:null,bands:n>1?{mean,sd}:null});
   });
 }
