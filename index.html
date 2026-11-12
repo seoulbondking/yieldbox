@@ -840,6 +840,8 @@ tr:hover td{background:var(--hover)}
         <span id="mxPeriodWrap"><label class="lbl">비교기간</label><select id="mxPeriod"></select></span>
       </div>
       <div class="tblwrap" style="margin-top:12px;max-height:none"><table id="mxTbl" style="table-layout:fixed;min-width:1100px"></table></div>
+      <h2 style="margin-top:18px">IRS</h2>
+      <div class="tblwrap" style="margin-top:8px;max-height:none"><table id="mxIrs" style="table-layout:fixed;min-width:1100px"></table></div>
     </div>
   </section>
 
@@ -1875,24 +1877,29 @@ function drawMatrix(){
   $("#mxPeriodWrap").style.display=mxMode==="chg"||mxMode==="sprchg"?"":"none";
   const KTB=BYGROUP["국고채권"]||[];const ktb=(y,i)=>{const s=KTB.find(s=>s.years===y);return s?valAt(s,i):null;};
   const groups=CURVE_GROUPS.filter(g=>!/ACM|^미국채|^KW /.test(g)&&!(mxMode.startsWith("spr")&&["국고채권","통안증권","CD","A1 CP"].includes(g)));
-  // 열(만기)은 네 보기 모두 같은 목록을 써서 표 모양을 고정
-  const ys=[...new Set(CURVE_GROUPS.filter(g=>!/ACM|^미국채|^KW /.test(g)).flatMap(g=>TENORED(g).map(s=>s.years)))].sort((a,b)=>a-b);
+  // 열(만기)은 네 보기 모두 같은 목록을 써서 표 모양을 고정. IRS는 아래 별도 표(IRS에만 있는 6·8·9Y 등이 위 표에 빈 열로 생기지 않게)
+  const isIrs=g=>/IRS/.test(g),base=CURVE_GROUPS.filter(g=>!/ACM|^미국채|^KW /.test(g));
+  const yset=L=>[...new Set(L.flatMap(g=>TENORED(g).map(s=>s.years)))].sort((a,b)=>a-b);
+  const ys=yset(base.filter(g=>!isIrs(g))),ysI=yset(base.filter(isIrs));
   const cell=(s,i)=>{const v=valAt(s,i);if(v==null)return null;
     if(mxMode==="lvl")return v;
     if(mxMode==="spr"){const k=ktb(s.years,i);return k==null?null:(v-k)*100;}
     const p=valAt(s,pj);if(p==null)return null;
     if(mxMode==="chg")return (v-p)*100;
     const k=ktb(s.years,i),kp=ktb(s.years,pj);return k==null||kp==null?null:((v-k)-(p-kp))*100;};
-  const rows=groups.map(g=>{const m=new Map(TENORED(g).map(s=>[s.years,cell(s,bi)]));return [g,ys.map(y=>m.has(y)?m.get(y):null)];});
-  const all=rows.flatMap(r=>r[1]).filter(v=>v!=null);
+  const mkRows=(G,Y)=>G.map(g=>{const m=new Map(TENORED(g).map(s=>[s.years,cell(s,bi)]));return [g,Y.map(y=>m.has(y)?m.get(y):null)];});
+  const rows=mkRows(groups.filter(g=>!isIrs(g)),ys),rowsI=mkRows(groups.filter(isIrs),ysI);
+  const all=rows.concat(rowsI).flatMap(r=>r[1]).filter(v=>v!=null);
   const div=mxMode==="chg"||mxMode==="sprchg";
   const mx=div?Math.max(...all.map(Math.abs)):Math.max(...all),mn=div?0:Math.min(...all);
   const fmt=v=>v==null?"":mxMode==="lvl"?v.toFixed(3):div?fbp(v):v.toFixed(1);
-  let h=`<colgroup><col style="width:190px">${ys.map(()=>"<col>").join("")}</colgroup><thead><tr><th>${DATES[bi]}${div?" vs "+DATES[pj]:""}</th>${ys.map(y=>`<th>${tenorLabel(y)}</th>`).join("")}</tr></thead><tbody>`;
   // 큰 구분(국고·통안 / 공사·공단 / 산금·중금 / 은행 / 카드 / 기타금융 / 회사채 / 단기 / IRS)이 바뀌는 행 위에 굵은 선
   const fam=g=>/국고|통안/.test(g)?0:/공사|공단/.test(g)?1:/산금|중금/.test(g)?2:/은행/.test(g)?3:/카드/.test(g)?4:/기타금융/.test(g)?5:/회사채/.test(g)?6:/CD|CP|콜/.test(g)?7:/IRS/.test(g)?8:9;
-  rows.forEach(([g,vs],r)=>h+=`<tr${r&&fam(g)!==fam(rows[r-1][0])?' class="fsep"':""}><td>${g}</td>${vs.map(v=>`<td class="heat" style="${div?heat(v==null?null:-v,mx,true):""}">${fmt(v)}</td>`).join("")}</tr>`);
-  $("#mxTbl").innerHTML=h+"</tbody>";
+  const tbl=(el,R,Y)=>{
+    let h=`<colgroup><col style="width:190px">${Y.map(()=>"<col>").join("")}</colgroup><thead><tr><th>${DATES[bi]}${div?" vs "+DATES[pj]:""}</th>${Y.map(y=>`<th>${tenorLabel(y)}</th>`).join("")}</tr></thead><tbody>`;
+    R.forEach(([g,vs],r)=>h+=`<tr${r&&fam(g)!==fam(R[r-1][0])?' class="fsep"':""}><td>${g}</td>${vs.map(v=>`<td class="heat" style="${div?heat(v==null?null:-v,mx,true):""}">${fmt(v)}</td>`).join("")}</tr>`);
+    $(el).innerHTML=h+"</tbody>";};
+  tbl("#mxTbl",rows,ys);tbl("#mxIrs",rowsI,ysI);
 }
 renders.matrix=drawMatrix;
 
