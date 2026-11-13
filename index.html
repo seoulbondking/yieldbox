@@ -600,6 +600,19 @@ tr:hover td{background:var(--hover)}
         <div id="flStkTip" style="position:absolute;display:none;pointer-events:none;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 9px;font-size:12px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.25)"></div>
       </div>
     </div>
+    <div class="usgrid flgrid">
+      <div class="panel" id="flTxPanel">
+        <div class="row" style="justify-content:space-between"><h2 id="flTxTitle">섹터별 순투자 · 전 만기</h2><span class="hint" id="flTxNote"></span></div>
+        <div class="tblwrap" style="max-height:none"><table id="flTx"></table></div>
+        <p class="hint" style="margin:6px 0 0">단위: 조원. 순투자 = 잔고 변화(기간 시작 직전 주 잔고 대비) = 순매수 − 만기상환. 만기상환이 빠져 단기물을 굴리는 은행·운용은 순매수보다 작게 나옵니다. 칸이나 오른쪽 막대를 누르면 아래 섹터 × 만기 표가 그 투자자·섹터의 잔고 변화로 바뀝니다.</p>
+      </div>
+      <div class="panel" id="flTxCPanel" style="position:relative">
+        <div class="row" style="justify-content:space-between"><h2>투자자별 섹터 순투자 (누적)</h2></div>
+        <canvas id="flTxC" style="width:100%;height:300px;display:block;cursor:pointer"></canvas>
+        <div id="flTxLeg" class="hint" style="display:flex;flex-wrap:wrap;gap:4px 12px;justify-content:center;margin-top:4px"></div>
+        <div id="flTxTip" style="position:absolute;display:none;pointer-events:none;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 9px;font-size:12px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.25)"></div>
+      </div>
+    </div>
     <div class="usgrid flgrid flstretch">
       <div class="panel">
         <div class="row" style="justify-content:space-between"><h2 id="flMxTitle">섹터 × 만기</h2><div class="row" style="gap:8px"><div class="seg" id="flInv"></div><div class="seg" id="flTm"><button data-m="net">순매수</button><button data-m="chg">잔고 변화</button><button data-m="bal">잔고</button><button data-m="share">비중</button></div></div></div>
@@ -3018,7 +3031,7 @@ const fJs=(v,d=2)=>v==null?"-":(v>0?"+":"")+(v/1e4).toFixed(d);
 const flAdd=arrs=>{arrs=arrs.filter(Boolean);if(!arrs.length)return null;const n=arrs[0].length,o=new Array(n).fill(null);
   for(const a of arrs)for(let i=0;i<n;i++)if(a[i]!=null)o[i]=(o[i]||0)+a[i];return o;};
 // kind: bal|net, sec: 섹터 또는 "전체"(합), inv: 투자자 또는 "운용", ten: 만기 구간
-const FL_TEN_PARTS={"1Y이하":["0_6M","6M_1Y"]};   // 표에서 합쳐 보이는 만기 구간
+const FL_TEN_PARTS={"1Y이하":["0_6M","6M_1Y"],"1~3Y":["1Y_2Y","2Y_3Y"],"3~5Y":["3Y_5Y"],"5~10Y":["5Y_7Y","7Y_10Y"],"10~20Y":["10Y_15Y","15Y_20Y"],"20Y초과":["20Y_30Y","30Y초과"]};   // 표에서 합쳐 보이는 만기 구간
 function flSer(kind,sec,inv,ten){
   const secs=sec==="전체"?FL.secs:[sec],invs=FL_PARTS[inv]||[inv],tens=FL_TEN_PARTS[ten]||[ten];
   return flAdd(secs.flatMap(s=>invs.flatMap(i=>tens.map(t=>FL[kind][s]&&FL[kind][s][i]&&FL[kind][s][i][t]))));
@@ -3223,7 +3236,60 @@ $("#flStk").onmousemove=e=>{const r=e.target.getBoundingClientRect(),x=e.clientX
 $("#flStk").onmouseleave=()=>{$("#flStkTip").style.display="none";};
 $("#flStk").onclick=e=>{const r=e.target.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;
   const h=flStkHit.find(h=>x>=h.x&&x<=h.x+h.w&&y>=h.y0-1&&y<=h.y1+1);if(!h)return;fl.inv=h.inv;fl.sec=h.s;fl.ten="전체";flSave();renders.flow();};
-function drawFlow(){drawFlMx();drawFlWho();drawFlStk();drawFlNet();}
+// 순투자 = 잔고 변화 (기간 시작 직전 주 잔고 대비, 떨어진 달은 구간별 변화 합). 순매수와 같은 섹터 × 투자자 표 + 투자자별 누적 막대
+const flChg=(a,w)=>{if(!a)return null;let s=0,c=0;for(const [x,y] of w.runs||[w]){const p=a[Math.max(0,x-1)],q=a[y];if(p!=null&&q!=null){s+=q-p;c++;}}return c?s:null;};
+const flNi=(sec,inv,w)=>flChg(flSer("bal",sec,inv,"전체"),w);
+let flTxHit=[];
+function drawFlTx(){
+  const w=flWin();
+  $("#flTxTitle").textContent=`섹터별 ${flPerLabel()} 순투자 · 전 만기`;
+  $("#flTxNote").textContent=`${FL.dates[Math.max(0,w[0]-1)]} → ${FL.dates[w[1]]} 잔고 변화`;
+  const rows=[...FL.secs,"전체"].map(s=>[s,FL_INVS.map(inv=>flNi(s,inv,w))]);
+  const mx=Math.max(1e-9,...rows.filter(r=>r[0]!=="전체").flatMap(r=>r[1]).filter(v=>v!=null).map(Math.abs));
+  let h=`<thead><tr><th></th>${FL_INVS.map(i=>`<th>${i}</th>`).join("")}</tr></thead><tbody>`;
+  rows.forEach(([s,vs])=>h+=`<tr${s==="전체"?' class="fsep"':""}><td>${s==="전체"?"합계":s}</td>${vs.map((v,j)=>{
+    const sel=s===fl.sec&&FL_INVS[j]===fl.inv?";outline:2px solid var(--amber);outline-offset:-2px":"";
+    return `<td class="heat" data-s="${s}" data-i="${FL_INVS[j]}" style="cursor:pointer;${s==="전체"?"font-weight:600":heat(v,mx,true)}${sel}">${fJs(v)}</td>`;}).join("")}</tr>`);
+  $("#flTx").innerHTML=h+"</tbody>";
+  const cv=$("#flTxC");if(!cv||!cv.clientWidth)return;
+  $("#flTxLeg").innerHTML=FL.secs.map(s=>`<span><i style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${FL_SEC_COL[s]||PAL[9]};margin-right:4px;vertical-align:-1px"></i>${s}</span>`).join("")+`<span>◆ 합계</span>`;
+  const lp=$("#flTxPanel"),rp=$("#flTxCPanel");
+  if(lp.offsetTop===rp.offsetTop){cv.style.height="200px";const other=rp.offsetHeight-cv.offsetHeight;cv.style.height=Math.max(240,lp.offsetHeight-other)+"px";}
+  else cv.style.height="300px";
+  const dpr=devicePixelRatio||1,W=cv.clientWidth,H=cv.clientHeight;cv.width=W*dpr;cv.height=H*dpr;
+  const c=cv.getContext("2d");c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,W,H);
+  const fg=css("--fg"),mu=css("--axis"),gr=css("--grid");
+  const data=FL_INVS.map(inv=>({inv,parts:FL.secs.map(s=>({s,v:flNi(s,inv,w)||0}))}));
+  data.forEach(d=>{d.pos=d.parts.reduce((a,p)=>a+Math.max(0,p.v),0);d.neg=d.parts.reduce((a,p)=>a+Math.min(0,p.v),0);d.tot=d.pos+d.neg;});
+  let hi=Math.max(0,...data.map(d=>d.pos))/1e4,lo=Math.min(0,...data.map(d=>d.neg))/1e4;if(hi===lo)hi=lo+1;
+  const st=rtNice(hi-lo,[0.05,0.1,0.2,0.5,1,2,5,10,20,50,100]);hi=Math.ceil(hi/st)*st;lo=Math.floor(lo/st)*st;
+  const L=52,R=12,T=14,B=30,ph=H-T-B,pw=W-L-R,Y=v=>T+(hi-v)/(hi-lo)*ph;
+  c.font="12px sans-serif";c.textAlign="right";c.textBaseline="middle";
+  for(let v=lo;v<=hi+st/2;v+=st){const y=Y(v);c.strokeStyle=gr;c.lineWidth=1;c.beginPath();c.moveTo(L,y);c.lineTo(W-R,y);c.stroke();c.fillStyle=mu;c.fillText(+v.toFixed(2)+"조",L-6,y);}
+  c.strokeStyle=fg;c.globalAlpha=.6;c.beginPath();c.moveTo(L,Y(0));c.lineTo(W-R,Y(0));c.stroke();c.globalAlpha=1;
+  const slot=pw/data.length,bw=Math.min(70,slot*.55);flTxHit=[];
+  data.forEach((d,k)=>{const x=L+slot*k+(slot-bw)/2;let up=0,dn=0;
+    for(const p of d.parts){if(!p.v)continue;const a=p.v/1e4;let y0,y1;
+      if(a>0){y0=Y(up+a);y1=Y(up);up+=a;}else{y0=Y(dn);y1=Y(dn+a);dn+=a;}
+      c.fillStyle=FL_SEC_COL[p.s]||PAL[9];c.fillRect(x,y0,bw,Math.max(1,y1-y0));
+      if(d.inv===fl.inv&&p.s===fl.sec){c.strokeStyle=css("--amber");c.lineWidth=2.5;c.strokeRect(x+1,y0+1,bw-2,Math.max(1,y1-y0)-2);}
+      flTxHit.push({x,y0,y1,w:bw,inv:d.inv,s:p.s,v:p.v,tot:d.tot});}
+    const ty=Y(d.tot/1e4),cx=x+bw/2;c.fillStyle=fg;c.beginPath();c.moveTo(cx,ty-6);c.lineTo(cx+6,ty);c.lineTo(cx,ty+6);c.lineTo(cx-6,ty);c.closePath();c.fill();
+    c.textAlign="center";c.textBaseline="bottom";c.font="bold 12px sans-serif";c.fillText(fJs(d.tot),cx,Math.max(T+12,Y(up)-4));
+    c.textBaseline="top";c.font=(d.inv===fl.inv?"bold ":"")+"13px sans-serif";c.fillStyle=d.inv===fl.inv?css("--amber"):fg;c.fillText(d.inv,cx,H-B+8);});
+}
+// 칸·막대 -> 그 투자자·섹터로, 아래 섹터 × 만기 표는 잔고 변화 보기로
+const flTxPick=(inv,s)=>{fl.inv=inv;fl.sec=s;fl.ten="전체";fl.tm="chg";
+  $$("#flTm button").forEach(b=>b.classList.toggle("on",b.dataset.m==="chg"));flSave();renders.flow();};
+$("#flTx").onclick=e=>{const c=e.target.closest("td[data-i]");if(c)flTxPick(c.dataset.i,c.dataset.s);};
+const flTxAt=e=>{const r=e.target.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;return [flTxHit.find(h=>x>=h.x&&x<=h.x+h.w&&y>=h.y0-1&&y<=h.y1+1),x,y,r];};
+$("#flTxC").onmousemove=e=>{const [h,x,y,r]=flTxAt(e),tip=$("#flTxTip");
+  if(!h){tip.style.display="none";return;}
+  tip.innerHTML=`<b>${h.inv} · ${h.s}</b><br>${flPerLabel()} 순투자 <b class="${cls(h.v)}">${fJs(h.v)}조</b><br><span class="hint">${h.inv} 합계 ${fJs(h.tot)}조</span>`;
+  tip.style.display="block";tip.style.left=Math.min(x+12,r.width-170)+"px";tip.style.top=Math.max(0,y-10)+"px";};
+$("#flTxC").onmouseleave=()=>{$("#flTxTip").style.display="none";};
+$("#flTxC").onclick=e=>{const [h]=flTxAt(e);if(h)flTxPick(h.inv,h.s);};
+function drawFlow(){drawFlMx();drawFlWho();drawFlStk();drawFlTx();drawFlNet();}
 $("#flInv").onclick=e=>{const b=e.target.closest("button");if(!b)return;fl.inv=b.dataset.i;flSave();renders.flow();};
 $("#flTwInv").onclick=e=>{const b=e.target.closest("button");if(!b)return;fl.tw.i=b.dataset.i;flSave();drawFlTenWave();};
 $("#flTwSec").onclick=e=>{const b=e.target.closest("button");if(!b)return;fl.tw.s=flToggle(fl.tw.s||[],b.dataset.s);if(fl.tw.s.length===FL.secs.length)fl.tw.s=[];flSave();drawFlTenWave();};
