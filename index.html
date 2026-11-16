@@ -984,7 +984,7 @@ function tsChart(id,lines,{unit="%",height=380,zero=false,init=null,sync=null,sh
       // 더블클릭: 기간 선택 바에서 고른 구간으로 복귀
       bind:{dblclick:u=>()=>{if(init)u.setScale("x",{min:init[0],max:init[1]});else u.setScale("x",{min:u.data[0][0],max:u.data[0][u.data[0].length-1]});return null;}}},
   };
-  if(yrange)opts.scales.y={range:()=>yrange};   // 세로축 고정 (예: 비중 0~100%)
+  if(yrange)opts.scales.y={range:typeof yrange==="function"?yrange:()=>yrange};   // 세로축 고정 (예: 비중 0~100%)
   if(lines.some(l=>l.y2)){opts.scales.y2={auto:true};
     opts.axes.push(axis({scale:"y2",side:1,size:y2size||(y2unit==="계약"?74:54),grid:{show:false},values:(u,vs)=>vs.map(v=>y2unit==="bp"?v.toFixed(0)+"bp":y2unit==="계약"?Math.round(v).toLocaleString():v.toFixed(2))}));}
   opts.hooks={setSelect:[dragZoom],ready:[u=>u.over.addEventListener("mousedown",e=>{if(e.button)return;u._downX=e.clientX-u.over.getBoundingClientRect().left;DRAG_PLOT=u;})],
@@ -3009,7 +3009,9 @@ function drawKfCharts(){
   // 미결제약정 잔고(좌) + 일별 증감 막대(우)
   const dOi=D.oi.map((v,k)=>k&&v!=null&&D.oi[k-1]!=null?v-D.oi[k-1]:null);
   tsChart("kfOI",[{label:"미결제약정",color:PAL[2],x:X,y:G(D.oi),width:1.8},
-    {label:"일별 증감 (우)",color:"rgba(128,128,128,.55)",x:X,y:G(dOi),bars:true,y2:true}],{unit:"계약",y2unit:"계약",height:200,init:[TS[i0],TS[i1]],sync:"kf",ysize:70});
+    {label:"일별 증감 (우)",color:"rgba(128,128,128,.55)",x:X,y:G(dOi),bars:true,y2:true}],{unit:"계약",y2unit:"계약",height:200,init:[TS[i0],TS[i1]],sync:"kf",ysize:70,
+    // 세로축 최소 20만 계약 고정 (분기 롤오버 때 급락 구간은 아래로 잘림)
+    yrange:(u,mn,mx)=>{if(mx==null||mx<=2e5)return [2e5,3e5];return [2e5,mx+(mx-2e5)*0.05];}});
 }
 renders.kfut=()=>{
   $$("#kfProd button").forEach(b=>b.classList.toggle("on",b.dataset.p===kf.prod));$("#kfMa").value=kf.ma;
