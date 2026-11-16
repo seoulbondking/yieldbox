@@ -604,7 +604,7 @@ tr:hover td{background:var(--hover)}
       <div class="panel" id="flTxPanel">
         <div class="row" style="justify-content:space-between"><h2 id="flTxTitle">섹터별 순투자 · 전 만기</h2><span class="hint" id="flTxNote"></span></div>
         <div class="tblwrap" style="max-height:none"><table id="flTx"></table></div>
-        <p class="hint" style="margin:6px 0 0">단위: 조원. 순투자 = 잔고 변화(기간 시작 직전 주 잔고 대비) = 순매수 − 만기상환. 만기상환이 빠져 단기물을 굴리는 은행·운용은 순매수보다 작게 나옵니다. 칸이나 오른쪽 막대를 누르면 아래 섹터 × 만기 표가 그 투자자·섹터의 잔고 변화로 바뀝니다.</p>
+        <p class="hint" style="margin:6px 0 0">단위: 조원. 순투자 = 잔고 변화(기간 시작 직전 주 잔고 대비) = 순매수 − 만기상환. 만기상환이 빠져 단기물을 굴리는 은행·운용은 순매수보다 작게 나옵니다. 칸이나 오른쪽 막대를 누르면 아래 섹터 × 만기 표가 그 투자자·섹터의 순투자로, 순매수 차트도 주간 순투자로 바뀝니다.</p>
       </div>
       <div class="panel" id="flTxCPanel" style="position:relative">
         <div class="row" style="justify-content:space-between"><h2>투자자별 섹터 순투자 (누적)</h2></div>
@@ -615,9 +615,9 @@ tr:hover td{background:var(--hover)}
     </div>
     <div class="usgrid flgrid flstretch">
       <div class="panel">
-        <div class="row" style="justify-content:space-between"><h2 id="flMxTitle">섹터 × 만기</h2><div class="row" style="gap:8px"><div class="seg" id="flInv"></div><div class="seg" id="flTm"><button data-m="net">순매수</button><button data-m="chg">잔고 변화</button><button data-m="bal">잔고</button><button data-m="share">비중</button></div></div></div>
+        <div class="row" style="justify-content:space-between"><h2 id="flMxTitle">섹터 × 만기</h2><div class="row" style="gap:8px"><div class="seg" id="flInv"></div><div class="seg" id="flTm"><button data-m="net">순매수</button><button data-m="chg">순투자</button><button data-m="bal">잔고</button><button data-m="share">비중</button></div></div></div>
         <div class="tblwrap" style="max-height:none"><table id="flMx" style="table-layout:fixed;min-width:820px"></table></div>
-        <p class="hint" style="margin:6px 0 0">칸을 누르면 오른쪽 순매수 차트가 그 섹터·만기로 바뀝니다. 통안증권은 3년 이하 구간만 있습니다.</p>
+        <p class="hint" style="margin:6px 0 0">칸을 누르면 오른쪽 차트가 그 섹터·만기로 바뀝니다. '순투자'(= 잔고 변화)를 고르면 오른쪽 차트도 주간 순투자로 바뀝니다. 통안증권은 3년 이하 구간만 있습니다.</p>
       </div>
       <div class="panel">
         <div class="row" style="justify-content:space-between"><h2 id="flNetTitle">주간 순매수</h2><div id="flRange"></div></div>
@@ -3145,8 +3145,10 @@ const flPosView=()=>{const u=plots.flPos0||plots.flPos1;return u&&u.scales.x.min
 const flPosApply=(id,r)=>{const u=plots[id];if(!u||!r)return;u._syncing=true;u.setScale("x",{min:r[0],max:r[1]});u._syncing=false;};
 const flRangeGet=rangeBar($("#flRange"),"fl","3Y",()=>drawFlNet());
 function drawFlNet(){
-  const [i0,i1]=flRangeGet(),a=flSer("net",fl.sec,fl.inv,fl.ten);
-  $("#flNetTitle").textContent=`${fl.inv} 주간 순매수 · ${fl.sec==="전체"?"채권 전체":fl.sec} · ${fl.ten==="전체"?"전 만기":fl.ten.replace("_","~")}`;
+  // 위 표가 '순투자'면 주간 순투자(= 직전 주 대비 잔고 변화), 아니면 순매수
+  const ni=fl.tm==="chg",nm=ni?"순투자":"순매수";
+  const [i0,i1]=flRangeGet(),a=ni?(b=>b&&b.map((v,k)=>{if(v==null)return null;let j=k-1;while(j>=0&&b[j]==null)j--;return j<0?null:v-b[j];}))(flSer("bal",fl.sec,fl.inv,fl.ten)):flSer("net",fl.sec,fl.inv,fl.ten);
+  $("#flNetTitle").textContent=`${fl.inv} 주간 ${nm} · ${fl.sec==="전체"?"채권 전체":fl.sec} · ${fl.ten==="전체"?"전 만기":fl.ten.replace("_","~")}`;
   if(!a){tsChart("flNet",[],{});return;}
   const t0=TS[i0],t1=TS[i1];let acc=0;
   // 연휴 주는 날짜가 하루·이틀 간격으로 붙어 있어(예: 12/30, 12/31) 막대 폭이 그 간격에 맞춰 가늘어짐
@@ -3155,7 +3157,7 @@ function drawFlNet(){
     wk.set(f,p==null?(v??null):v==null?p:p+v);});
   const X=[...wk.keys()].sort((p,q)=>p-q),W=X.map(t=>wk.get(t));
   const cum=W.map((v,k)=>X[k]<t0||X[k]>t1+7*86400?null:(acc+=(v||0))/1e4);
-  const ls=[{label:"순매수(+)",color:css("--up"),x:X,y:W.map(v=>v>0?v/1e4:null),bars:true,barSize:[0.8,60]},{label:"순매도(−)",color:css("--down"),x:X,y:W.map(v=>v<0?v/1e4:null),bars:true,barSize:[0.8,60]},
+  const ls=[{label:`${nm}(+)`,color:css("--up"),x:X,y:W.map(v=>v>0?v/1e4:null),bars:true,barSize:[0.8,60]},{label:ni?"순투자(−)":"순매도(−)",color:css("--down"),x:X,y:W.map(v=>v<0?v/1e4:null),bars:true,barSize:[0.8,60]},
     {label:"기간 누적 (우)",color:PAL[5],x:X,y:cum,width:2,y2:true}];
   // 양 끝 막대가 반만 보이지 않게 앞뒤로 반 주씩 여유
   tsChart("flNet",ls,{unit:"조",y2unit:"조",dec:2,zero:true,height:300,init:[t0-4*86400,Math.max(t1,...X.filter(x=>x<=t1+6*86400))+4*86400],ysize:64});
@@ -3173,7 +3175,7 @@ function drawFlMx(){
   const inner=rows.filter(r=>r[0]!=="전체").flatMap(r=>r[1].slice(1)).filter(v=>v!=null);
   const mx=Math.max(1e-9,...inner.map(Math.abs)),div=fl.tm==="net"||fl.tm==="chg";
   const fmt=v=>v==null?"":fl.tm==="share"?v.toFixed(1):div?fJs(v):fJo(v);
-  $("#flMxTitle").textContent=`${inv} · 섹터 × 만기 ${fl.tm==="bal"?"잔고(조)":fl.tm==="share"?"비중(% of 전체 잔고)":fl.tm==="net"?`${flPerLabel()} 순매수(조)`:`${flPerLabel()} 잔고 변화(조)`}`;
+  $("#flMxTitle").textContent=`${inv} · 섹터 × 만기 ${fl.tm==="bal"?"잔고(조)":fl.tm==="share"?"비중(% of 전체 잔고)":fl.tm==="net"?`${flPerLabel()} 순매수(조)`:`${flPerLabel()} 순투자(조)`}`;
   let h=`<colgroup><col style="width:96px">${cols.map(()=>"<col>").join("")}</colgroup><thead><tr><th>${FL.dates[FL_L]}</th>${cols.map(t=>`<th>${t==="전체"?"전체":t.replace("_","~")}</th>`).join("")}</tr></thead><tbody>`;
   rows.forEach(([s,vs])=>h+=`<tr${s==="전체"?' class="fsep"':""}><td data-s="${s}" style="cursor:pointer">${s==="전체"?"합계":s}</td>${vs.map((v,j)=>{
     const sel=s===fl.sec&&cols[j]===fl.ten?";outline:2px solid var(--amber);outline-offset:-2px":"";
