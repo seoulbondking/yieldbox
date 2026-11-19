@@ -307,7 +307,7 @@ tr:hover td{background:var(--hover)}
 
   <!-- 스프레드 -->
   <section class="tab" id="tab-spread">
-    <div class="seg" id="spSub" style="margin-bottom:12px"><button data-v="detail">크레딧 상세</button><button data-v="grid">크레딧 한눈에</button><button data-v="bs">본드스왑</button></div>
+    <div class="seg" id="spSub" style="margin-bottom:12px"><button data-v="detail">상세</button><button data-v="grid">크레딧 한눈에</button><button data-v="bs">본드스왑</button></div>
     <div id="spDetail">
     <div class="panel">
       <div class="row">
@@ -349,7 +349,7 @@ tr:hover td{background:var(--hover)}
           <label class="checks"><label><input type="checkbox" id="gdExOn"> 통계 제외 기간</label></label>
           <span><label class="lbl">제외시작</label><input type="date" id="gdExA"></span>
           <span><label class="lbl">제외종료</label><input type="date" id="gdExB"></span>
-          <span class="hint">크레딧 상세의 설정과 따로 적용됩니다.</span>
+          <span class="hint">상세 탭의 설정과 따로 적용됩니다.</span>
         </div>
         <div class="chips" id="gdChips" style="margin-top:10px"></div>
         <p class="hint" id="gcHint" style="margin:8px 0 0;display:none">섹터 비교: 같은 테너의 국고 대비 스프레드(bp)를 섹터끼리 겹쳐 봅니다. 위에서 테너를 고르면 모든 카드가 함께 바뀌고, 차트를 드래그하면 함께 확대·축소됩니다.</p>
@@ -1201,7 +1201,7 @@ function drawCdDaily(){
   // 8) 초과 기대수익률 Z-score
   cdHeatTbl("cdExZ",CD_NOBBB,CD_TT,(r,T)=>T>=4&&CD_LOWA(r[0])?null:cdZ(cdEx(r[0],T),i),{fmt:v=>v.toFixed(2),div:true,fixMax:2.5});
   // Z-score 제외 기간 = 스프레드 › 크레딧 상세의 통계 제외 기간
-  const ex=cdZEx();$$(".cdZnote").forEach(e=>e.textContent=`Z-score 산출 기간 2013-01-01 이후${ex?` (${ex[0]}~${ex[1]} 제외, 스프레드 › 크레딧 상세 설정)`:" (제외 기간 없음, 스프레드 › 크레딧 상세 설정)"}.`);
+  const ex=cdZEx();$$(".cdZnote").forEach(e=>e.textContent=`Z-score 산출 기간 2013-01-01 이후${ex?` (${ex[0]}~${ex[1]} 제외, 스프레드 › 상세 설정)`:" (제외 기간 없음, 스프레드 › 상세 설정)"}.`);
 }
 $("#cdDate").onchange=()=>drawCdDaily();
 $("#cdLatest").onclick=()=>{$("#cdDate").value="";drawCdDaily();};
@@ -1591,7 +1591,9 @@ function drawBsGrid(){
     $("#bsm"+k).innerHTML=`<b>${cur==null?"-":cur.toFixed(1)}bp</b> · WTD <span class="${cls(w)}">${fbp(w)}</span> · MTD <span class="${cls(m)}">${fbp(m)}</span>`;
     const hv=$("#bsh"+k),hoverAt=(u,i)=>{if(i==null||i<0){hv.innerHTML="&nbsp;";return;}let j=i;while(j>0&&y[j]==null&&i-j<10)j--;const v=y[j];
       hv.innerHTML=v==null?`${DATES[i]} · -`:`<span class="d">${DATES[j]}</span> <b>${v.toFixed(1)}bp</b>${cur!=null?` <span class="${cls(cur-v)}">→ 현재 ${fbp(cur-v)}</span>`:""}`;};
-    tsChart("bs"+k,[{label:p.key,color:PAL[1],x:TS,y}],{unit:"bp",height:200,zero:true,onCursor:hoverAt,init:[TS[Math.max(i0,shiftIdx(i1,"5M"))],TS[i1]],sync:"bs",bands:n>1?{mean,sd}:null});});
+    // 구간 평균선 (크레딧 한눈에처럼 검은 점선, 통계 기간 반영)
+    const avg=n?y.map((v,i)=>i>=i0&&i<=i1?+mean.toFixed(2):null):null;
+    tsChart("bs"+k,[{label:p.key,color:PAL[1],x:TS,y},...(avg?[{label:"평균",color:css("--fg"),dash:[6,4],x:TS,y:avg,width:1.2}]:[])],{unit:"bp",height:200,zero:true,onCursor:hoverAt,init:[TS[Math.max(i0,shiftIdx(i1,"5M"))],TS[i1]],sync:"bs",bands:n>1?{mean,sd}:null});});
 }
 renders.spread=()=>{
   if(!["detail","grid","bs"].includes(spSub))spSub="detail";
