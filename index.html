@@ -772,7 +772,7 @@ tr:hover td{background:var(--hover)}
       </div>
       <div class="tblwrap" style="max-height:none;margin-top:10px"><table id="rtTblA" class="rtt"></table></div>
       <p class="hint" style="margin:8px 0 0">롤마진 = y(T) − y(T−6M). 9M 은 9M−3M, 4Y·5Y 는 3.5Y·4.5Y 를 양옆 만기 직선보간(4Y* = y4 − (y3+y4)/2).
-        모든 통계는 통계 시작일 ~ 기준일 중 제외 기간을 뺀 영업일로 계산합니다. 1Y·3Y 평균은 기준일 직전 12·36개월, 전기간 평균·백분위는 그 전체 구간입니다.
+        모든 통계는 통계 시작일 ~ 기준일 중 제외 기간을 뺀 영업일로 계산합니다. 1Y·3Y 평균은 기준일 직전 12·36개월, 전기간 평균·z는 그 전체 구간입니다.
         z(1Y)·z(3Y) = (현재 − 평균)/σ, 평균·σ 는 각각 직전 12·36개월 (σ 는 모표준편차, 셀에 마우스를 올리면 표시). 셀을 누르면 왼쪽 커브 그림, 아래 6M 보유수익 분해(그 테너)와 일별 추이가 그 섹터·테너로 바뀝니다.</p>
     </div>
     </div>
@@ -2320,9 +2320,10 @@ function rtStats(a,bi){
   const mean=x=>x.length?x.reduce((s,v)=>s+v,0)/x.length:null,sd=x=>{const m=mean(x);return x.length?Math.sqrt(x.reduce((s,v)=>s+(v-m)**2,0)/x.length):null;};
   const cur=a[bi],m1=mean(y1),s1=sd(y1),m3=mean(y3),s3=sd(y3);
   return {cur,m1,s1,z1:cur==null||!s1?null:(cur-m1)/s1,m3,s3,z3:cur==null||!s3?null:(cur-m3)/s3,mAll:mean(all),sAll:sd(all),
-    pct:cur==null||!all.length?null:all.filter(v=>v<=cur).length/all.length*100,n:all.length};}
-const RT_V1=[["cur","현재"],["m1","1Y 평균"],["z1","z(1Y)"],["m3","3Y 평균"],["z3","z(3Y)"],["mAll","전기간 평균"],["pct","전기간 백분위"]];
+    zAll:cur==null||!all.length||!sd(all)?null:(cur-mean(all))/sd(all),n:all.length};}
+const RT_V1=[["cur","현재"],["m1","1Y 평균"],["z1","z(1Y)"],["m3","3Y 평균"],["z3","z(3Y)"],["mAll","전기간 평균"],["zAll","z(전기간)"]];
 if(rt.v1==="s3")rt.v1="z3";
+if(rt.v1==="pct")rt.v1="zAll";
 const RT_V2=[...RT_T.map(t=>[String(t),rtLab(t).replace("*","")]),["tot","총수익 표"],["ex","크레딧 초과 표"]];
 $("#rtView1").innerHTML=RT_V1.map(([k,l])=>`<button data-v="${k}" style="padding:2px 9px;font-size:11px">${l}</button>`).join("");
 $("#rtView2").innerHTML=RT_V2.map(([k,l])=>`<button data-v="${k}" style="padding:2px 9px;font-size:11px">${l}</button>`).join("");
@@ -2343,7 +2344,7 @@ function drawRtA(){
   let h=`<thead><tr><th>${DATES[bi]}</th>${RT_T.map(t=>`<th>${rtLab(t)}</th>`).join("")}</tr></thead><tbody>`;
   RT_GROUPS.forEach((g,r)=>{const sep=r&&rtFam(g)!==rtFam(RT_GROUPS[r-1])?' class="gsep"':"";
     h+=`<tr${sep}><td data-cv="${g}" title="커브 그림에 표시" style="cursor:pointer${g===rt.cv?";color:var(--amber);font-weight:600":""}">${rdShort(g)}</td>${M[r].map((c,k)=>{const x=val(c);
-      const tip=c?`${rdShort(g)} ${rtLab(RT_T[k])} · 현재 ${c.cur==null?"-":c.cur.toFixed(1)} · 1Y ${c.m1==null?"-":c.m1.toFixed(1)} (σ ${c.s1==null?"-":c.s1.toFixed(1)}) · 3Y ${c.m3==null?"-":c.m3.toFixed(1)} (σ ${c.s3==null?"-":c.s3.toFixed(1)}) · 전기간 ${c.mAll==null?"-":c.mAll.toFixed(1)} · ${c.pct==null?"-":c.pct.toFixed(0)}%ile · n=${c.n}`:"";
+      const tip=c?`${rdShort(g)} ${rtLab(RT_T[k])} · 현재 ${c.cur==null?"-":c.cur.toFixed(1)} · 1Y ${c.m1==null?"-":c.m1.toFixed(1)} (σ ${c.s1==null?"-":c.s1.toFixed(1)}) · 3Y ${c.m3==null?"-":c.m3.toFixed(1)} (σ ${c.s3==null?"-":c.s3.toFixed(1)}) · 전기간 ${c.mAll==null?"-":c.mAll.toFixed(1)} (σ ${c.sAll==null?"-":c.sAll.toFixed(1)}) · z ${c.zAll==null?"-":c.zAll.toFixed(2)} · n=${c.n}`:"";
       return `<td class="ck" data-g="${g}" data-t="${RT_T[k]}" title="${tip}" style="${hs(x)}${rt.ts&&rt.ts.g===g&&rt.ts.t===RT_T[k]?";outline:2px solid var(--amber);outline-offset:-2px":""}">${fmt(x)}</td>`;}).join("")}</tr>`;});
   $("#rtTblA").innerHTML=h+"</tbody>";
 }
