@@ -942,6 +942,8 @@ let rT;window.addEventListener("resize",()=>{clearTimeout(rT);rT=setTimeout(redr
 function rangeBar(el,key,def,onChange){
   const presets=["1M","3M","6M","1Y","3Y","5Y","10Y","전체"];
   let st=store.get("range:"+key,{p:def});
+  // 다시 열 때는 직접 지정 기간도 끝날짜를 항상 최신일로 (시작일만 기억)
+  if(!st.p)st={...st,toLatest:true};
   el.innerHTML=`<div class="row" style="gap:8px"><div class="seg">${presets.map(p=>`<button data-p="${p}">${p}</button>`).join("")}</div>
     <input type="date" min="${DATES[0]}" max="${DATES[LAST]}"> ~ <input type="date" min="${DATES[0]}" max="${DATES[LAST]}"></div>`;
   const [a,b]=el.querySelectorAll("input");
